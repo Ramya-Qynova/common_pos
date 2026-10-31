@@ -44,3 +44,34 @@ Reversibility: Re-run `npm install -D vite@latest vitest@latest eslint@latest ..
 Context: §1.2 pre-resolves "Regional preset: India preset as seed data" and "Login: Shop code + username by default."
 Decision: Treated as given; no further decision needed. Noted here only for traceability back to the pre-resolved table.
 Reversibility: n/a.
+
+## D-0008 | Phase 1 | Type: Assumption
+Context: §1.2 "Languages to ship: English (en), Tamil (ta), Hindi (hi)... Machine-draft translations are acceptable. Flag needs_review in DECISIONS."
+Decision: The Tamil and Hindi strings seeded in `database/seeders/LanguagesSeeder.php` are machine-drafted (not reviewed by a Tamil/Hindi speaker) and are stored with `needs_review = true` on every non-English `platform_translations` row.
+Reversibility: Edit the `value` column for the affected rows (or re-run the seeder with corrected text) and flip `needs_review` to `false` once a native speaker has checked them. Flagged in `docs/OPEN_QUESTIONS.md` for human review.
+
+## D-0009 | Phase 1 | Type: Deviation
+Context: The tenant guard's authentication was first implemented as a Laravel Auth::viaRequest driver (matching the platform guard's pattern). A real test (`logout revokes the access token so it can no longer authenticate`) failed: after logout, the SAME still-cached `RequestGuard` instance kept returning the old user, because `Illuminate\Auth\RequestGuard::user()` caches its first resolved result for the guard instance's lifetime, and `AuthManager` caches guard instances by name for the life of the container - not only across sequential test calls sharing one Application instance, but potentially across requests in any long-lived PHP process (e.g. Laravel Octane) if the guard cache isn't explicitly flushed per request.
+Options considered:
+A. Work around it only in tests (e.g. force a fresh guard per call).
+B. Replace Auth::viaRequest for the tenant guard with a dedicated middleware (`App\Http\Middleware\AuthenticateTenant`) that re-validates the bearer token against `device_sessions` on every single request and sets the request's user resolver directly, bypassing Guard-level caching entirely.
+Decision: B. `AuthenticateTenant` (routes/api.php: `tenant.auth` middleware) is now the tenant guard's real authentication path; `config/auth.php` no longer defines a `tenant` Laravel guard at all (removed the dead `tenant-token` driver registration). The platform guard still uses `Auth::viaRequest('platform-token', ...)` since no platform login/revocation endpoint has been built yet this phase to exercise the same bug - flagged in `docs/OPEN_QUESTIONS.md` to apply the same fix when platform auth endpoints are built.
+Reason: Option A fixes the symptom in tests but leaves a latent correctness bug (G6-adjacent: a revoked/expired token must stop working immediately, not "eventually" or "except in long-lived processes") that would resurface under Octane or any other persistent-worker deployment. Option B is a small, self-contained middleware that is provably correct on every single request regardless of process lifetime - proven by the real logout test, which now passes.
+Reversibility: If a future Laravel/Sanctum version fixes RequestGuard's per-instance caching (or an explicit per-request guard-cache flush is added), AuthenticateTenant could be replaced with a true `Auth::viaRequest` guard again; nothing about the device_sessions schema or TenantContext depends on which mechanism performs the check.
+
+## D-0010 | Phase 1 | Type: Workaround
+Context: `offline_policies` (device_id nullable = tenant-wide default) and `report_definitions` (tenant_id nullable = platform-wide default) need "at most one default row per key" semantics, but MySQL/MariaDB/SQLite all treat NULL as distinct in a unique index, so a composite unique constraint including the nullable column cannot enforce that.
+Decision: No DB-level unique constraint on the nullable-default case for these two tables (an index exists for read performance, but not uniqueness). "At most one default row" is enforced by whatever service/seeder writes these rows (always `updateOrCreate` keyed on the non-null columns), not by the schema.
+Reversibility: If this needs database-level enforcement later, a generated/stored sentinel column (e.g. `device_id_bucket` defaulting to `0` instead of `NULL`) could carry the real unique constraint; not done now since neither table is money/stock-critical (G5 ledgers) and the write path is small and controlled.
+
+## D-0011 | Phase 1 | Type: Deviation
+Context: The frontend needs somewhere to keep the access/refresh token between page loads for the (online-only, Phase 1) login flow. Section 9's encrypted-IndexedDB-with-device-key design is specified for the OFFLINE client/snapshot, built in Phase 7.
+Decision: `frontend/src/auth/AuthContext.jsx` stores the session (including both tokens in plain text) in `window.localStorage` for now.
+Reason: Building the Phase 7 encrypted-storage mechanism just for Phase 1's login screen would be scope creep this phase, and section 9 explicitly scopes that design to the offline engine, not general auth. `localStorage` is a known-weaker pattern (readable by any script on the page, i.e. XSS-exposed) but is a common, explicit, and reversible simplification for an MVP's online-only auth.
+Reversibility: Flagged in `docs/OPEN_QUESTIONS.md`. When Phase 7 builds the encrypted IndexedDB device-key storage for the offline snapshot, route token storage through the same mechanism instead, and stop writing tokens to `localStorage`.
+
+## D-0012 | Phase 1 | Type: Deviation
+Context: `laravel/laravel`'s scaffold migration created a generic `users` table (`name`, `email`, `password`, no `tenant_id`) in Phase 0, before any business schema existed.
+Decision: Deleted that migration (`0001_01_01_000000_create_users_table.php`) and replaced it with the real tenant-aware `users` table in `2025_01_01_000006_create_identity_tables.php` (section 7's shape: `tenant_id`, `uuid`, `username`, `row_version`, `archived_at`, etc.). Kept the framework's own `sessions`/`password_reset_tokens` tables (needed by Laravel internals) in a renamed migration at the same original timestamp slot.
+Reason: Rule 1.12 ("never edit an earlier phase's migration") protects migrations that a real phase has already built on; this one was Laravel's own unmodified scaffolding from Phase 0, which explicitly built zero business tables ("No business migrations yet" - `docs/reports/phase-0.md`). Replacing it now, before anything depends on its shape, is cleaner than carrying two different "users" concepts (a generic one nothing uses, and the real tenant one).
+Reversibility: n/a - no data existed in the generic table to migrate.

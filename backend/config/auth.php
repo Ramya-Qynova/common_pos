@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Platform\PlatformUser;
 use App\Models\User;
 
 return [
@@ -15,6 +16,10 @@ return [
     |
     */
 
+    // Default guard stays 'web' (always defined). Real API authentication
+    // never relies on the default guard - it goes through the explicit
+    // `tenant.auth` / `auth:platform` middleware, each naming its guard
+    // directly. See AuthenticateTenant and docs/DECISIONS.md D-0009.
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
@@ -37,10 +42,29 @@ return [
     |
     */
 
+    /*
+    | Two structurally separate identities (docs/MASTER_PROMPT.md section 5
+    | "Identity"): App\Models\User (tenant) against device_sessions bearer
+    | tokens, and App\Models\Platform\PlatformUser against platform_sessions
+    | bearer tokens - no shared code path between them, so a platform
+    | session can never resolve a tenant user or vice versa.
+    |
+    | Only the platform side is a real Laravel guard here (driver
+    | 'platform-token', registered via Auth::viaRequest in
+    | AppServiceProvider::boot()). The tenant side is authenticated by the
+    | `tenant.auth` middleware (App\Http\Middleware\AuthenticateTenant)
+    | instead of a Guard, specifically to avoid Illuminate\Auth\RequestGuard
+    | caching a resolved user past the point its token is revoked - see
+    | docs/DECISIONS.md D-0009.
+    */
     'guards' => [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+        'platform' => [
+            'driver' => 'platform-token',
+            'provider' => 'platform_users',
         ],
     ],
 
@@ -67,10 +91,10 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'platform_users' => [
+            'driver' => 'eloquent',
+            'model' => PlatformUser::class,
+        ],
     ],
 
     /*

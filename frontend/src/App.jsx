@@ -1,12 +1,19 @@
 import './App.css';
-import { t } from './i18n';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import LoginScreen from './screens/LoginScreen';
+import AppShell from './screens/AppShell';
+
+function Root() {
+  const { session } = useAuth();
+
+  return session ? <AppShell /> : <LoginScreen />;
+}
 
 function App() {
   return (
-    <main className="boot-screen">
-      <h1>{t('app.boot.title')}</h1>
-      <p>{t('app.boot.subtitle')}</p>
-    </main>
+    <AuthProvider>
+      <Root />
+    </AuthProvider>
   );
 }
 

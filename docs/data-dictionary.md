@@ -38,4 +38,24 @@ Any operation that locks more than one `stock_balances` row (`SELECT ... FOR UPD
 
 Filled in as each phase's migrations land. Format: `table_name` — domain — one line — `backend/database/migrations/<file>`.
 
-_(Empty at the end of Phase 0 — no business tables exist yet. Phase 1 adds the platform/tenant/identity tables; this index is updated in that phase's commit.)_
+### Phase 1
+
+All in `backend/database/migrations/2025_01_01_*`, in this file order:
+
+- `platform_roles`, `platform_users`, `platform_sessions` — platform — the platform guard's identity, separate from every tenant table (`2025_01_01_000001_create_platform_identity_tables.php`)
+- `plans`, `module_definitions`, `plan_modules`, `plan_limits`, `templates`, `template_versions`, `languages`, `feature_flags` — platform catalogue — what a tenant is built from at onboarding (`2025_01_01_000002_create_plan_module_template_tables.php`)
+- `tenants`, `tenant_subscriptions`, `tenant_modules`, `tenant_template_snapshot` — tenant/config — the tenant record and its copy-on-onboard template snapshot (`2025_01_01_000003_create_tenant_core_tables.php`)
+- `platform_settings`, `plan_settings`, `tenant_settings` — tenant/config — the three resolvable layers behind `SettingsService` (`2025_01_01_000004_create_settings_tables.php`)
+- `branches`, `warehouses`, `registers` — org — section 5's org model (`2025_01_01_000005_create_org_tables.php`)
+- `permissions`, `roles`, `role_permissions`, `users`, `user_roles`, `user_branch_access` — identity/security — the tenant guard's RBAC (`2025_01_01_000006_create_identity_tables.php`)
+- `devices`, `device_sessions`, `security_events` — identity/security — device-bound token sessions + append-only security log (`2025_01_01_000007_create_device_session_security_tables.php`)
+- `audit_logs` — identity/security — append-only audit trail (`2025_01_01_000008_create_audit_logs_table.php`)
+- `numbering_sequences`, `tax_rates`, `tax_groups`, `tax_group_items`, `payment_methods` — tenant/config — schema only this phase, no service logic yet (that's Phase 2/4) (`2025_01_01_000009_create_numbering_tax_payment_tables.php`)
+- `lookup_types`, `lookup_values`, `custom_field_definitions`, `custom_field_index` — tenant/config — schema only this phase (`2025_01_01_000010_create_lookup_customfield_tables.php`)
+- `platform_translations`, `translations` — tenant/config — seeded with a starter en/ta/hi dictionary (`2025_01_01_000011_create_translation_tables.php`); not yet wired into `GET /tenant/config` (see `docs/PROGRESS.md`)
+- `document_templates`, `hardware_profiles`, `offline_policies` — tenant/config — schema only this phase (`2025_01_01_000012_create_document_hardware_offline_tables.php`)
+- `discount_rules`, `approval_rules`, `alert_rules`, `loyalty_rules`, `price_rules` — tenant/config — schema only this phase, rule engine itself lands when something evaluates them (`2025_01_01_000013_create_rule_tables.php`)
+- `status_definitions`, `report_definitions` — tenant/config — schema only this phase (`2025_01_01_000014_create_status_report_tables.php`)
+- `approval_requests`, `approvals` — identity/security — schema only this phase, no rule triggers an approval yet (`2025_01_01_000015_create_approval_tables.php`)
+
+Also: the Phase 0 default `users` migration was removed and replaced by the tenant-aware `users` table above (see `docs/DECISIONS.md` D-0012); `sessions`/`password_reset_tokens` (framework-only, not business data) kept at their original timestamp slot.
