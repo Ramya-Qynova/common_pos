@@ -3,7 +3,17 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 5 — Returns, purchasing, daily close, reports: **complete**, tagged `phase-5-complete`. See `docs/reports/phase-5.md` for full detail and real executed test output. Phase 6 starts next.
+Phase 6 — Hardware adapters & Vegetable/Grocery template: **complete**, tagged `phase-6-complete`. See `docs/reports/phase-6.md` for full detail and real executed test output. Phase 7 (offline engine) starts next.
+
+## Done (Phase 6, on top of Phases 0-5)
+- `grocery` template added to `TemplatesSeeder` as pure data (weighing + batch_expiry modules, kg/gram/pcs units, Vegetables/Fruits/Leafy-Greens categories, a `wastage_reason` lookup, a tenant-level override enabling `pos.variable_weight_barcode`) - built on the exact same `general_retail` template engine, zero new code paths.
+- `TemplateUpdateService::preview()`/`apply()`: the "template snapshot + update preview" mechanism named in section 12 - diffs a tenant's actual rows against its template's latest published data and additively (never destructively) creates whatever's missing; the same call both finishes a fresh onboarding's catalogue data AND picks up a newer published template version later (proved by publishing a real v2 mid-test).
+- `VariableWeightBarcodeService`: decodes a scanned barcode's embedded weight using the tenant's `pos.variable_weight_barcode` setting (never a hardcoded format); gated by the `weighing` module flag via `Tenant::isModuleEnabled()` (built Phase 1, exercised for real for the first time) - not a template-name check. A plain fixed barcode still resolves by exact match for every tenant regardless of that module.
+- Proved the exit gate directly: a weight-derived fractional quantity flows into the unmodified Phase 4 `SaleService`/`PricingEngine` with no grocery-specific sale code at all (G3's decimal-string handling already supports it).
+- `PriceListService::bulkSetPrices()` (daily rate update) and `StockAdjustmentController` (wastage's first HTTP route, wrapping Phase 2's already-generic `StockAdjustmentService`) - both proved to work identically on a `general_retail` tenant as a `grocery` one.
+- `HardwareProfileService`/`HardwareProfileController`: CRUD for `hardware_profiles` (Phase 1, schema-only until now).
+- A real, zero-regression-risk design choice found while building this (D-0029): template catalogue-data application deliberately lives in `TemplateUpdateService`, not `OnboardingService::createTenant()` itself, because 11 existing test fixtures manually create `Unit` rows that would collide with auto-created ones.
+- 13 new backend tests (96 total), all passing for real; Pint/Larastan/Dynamic-Only clean; frontend suite unaffected (backend-only phase).
 
 ## Done (Phase 5, on top of Phases 0-4)
 - `SaleCancellationService`: reverses stock/payment/customer-ledger within `sales.cancel_window`, gated by `pos.sales.cancel` + the same APPROVAL_REQUIRED/approval_requests pattern Phase 4 built for discounts.
@@ -23,12 +33,12 @@ Phase 5 — Returns, purchasing, daily close, reports: **complete**, tagged `pha
 - `HeldSaleService`: hold/resume, storing only product/variant/unit/quantity (never a price) so resuming re-prices through the exact same `SaleService::create()` path.
 - 19 new backend tests (64 total) + the JS pricing engine test (14 frontend tests total), all passing for real; Pint/Larastan clean; Dynamic-Only Rule check still passes.
 
-## Next 5 steps (start of Phase 6)
-1. Vegetable/Grocery template (section 12 Phase 6): weighing-unit support, variable-weight barcodes, template-specific catalogue defaults, dynamic pricing per kg/unit.
-2. Offline sync engine groundwork (section 9): IndexedDB snapshot/outbox on the frontend, `GET /sync/pull`/`POST /sync/push` endpoints, operation envelope + idempotent replay.
-3. Exchange service (D-0025) — compose `SaleReturnService::complete()` + `SaleService::create()` in one transaction, settling the difference by payment or refund.
-4. Export center (D-0025) — make `export_jobs` actually run (currently schema-only since Phase 2) and route large reports through it per section 8.13.
-5. Consider closing D-0021 (a minimal rule evaluator for `discount_rules`/`approval_rules`) — would also unlock the `discount_rules` size-based auto-approval half of Phase 4's gating and any Phase 5+ approval flow that wants data-driven conditions instead of a flat permission check.
+## Next 5 steps (start of Phase 7)
+1. Offline engine core (section 12 Phase 7 / section 9): device policy, `GET /sync/pull` (incremental, `change_log`-ordered) and `POST /sync/push` (batched, idempotent per `operation_uuid`), the operation envelope, conflict detection.
+2. IndexedDB snapshot + outbox on the frontend (section 9's stores: snapshot_products, snapshot_prices, outbox, held_bills, local_receipts, sync_state) - the first real frontend work since Phase 1's login/shell screens.
+3. Device revoke + wipe, encrypted local storage (Web Crypto), offline numbering (`device_series` per `numbering.offline_mode`, already schema-ready via `numbering_sequences.device_id`).
+4. Exchange service (D-0025, still open) — compose `SaleReturnService::complete()` + `SaleService::create()` in one transaction, settling the difference by payment or refund.
+5. Export center (D-0025, still open) — make `export_jobs` actually run (schema-only since Phase 2) and route large reports through it; consider closing D-0021 (a minimal rule evaluator for `discount_rules`/`approval_rules`) if time allows.
 
 ## How to run tests
 - Backend: `cd backend && php artisan test`; style: `php vendor/bin/pint --test`; static analysis: `php vendor/bin/phpstan analyse --no-progress`
@@ -50,6 +60,8 @@ Phase 5 — Returns, purchasing, daily close, reports: **complete**, tagged `pha
 - `cost_layers`/FIFO costing and `export_jobs` are schema-only; discount/approval rule conditions (`discount_rules` JSON) aren't evaluated, only the `pos.sales.discount` permission check (D-0021).
 - No `exchange` service, no export-center job execution, no notification/alert delivery (`alert_rules` still schema-only) (D-0025).
 - Damaged-condition sale returns are a write-off with no dedicated damaged-stock location (D-0024); `ReportService::outstanding()` has no ageing-bucket breakdown (D-0026); PO receiving matches lines by product+variant rather than a specific PO line ID (D-0027); `DailyClosingService::reopen()` has no automatic reversing-entry mechanism for post-reopen corrections (D-0028).
+- `OnboardingService::createTenant()` still only applies modules+roles - a tenant's template-provided units/categories/lookups/settings only exist after an explicit `TemplateUpdateService::apply()` call (D-0029, by design, not yet wired into onboarding itself).
+- No EAN-13 check-digit validation on variable-weight barcodes (D-0031); no frontend hardware adapter implementations (ReceiptPrinter/WeighingScale/BarcodeScanner device-talking code) - `hardware_profiles` is server-config CRUD only (D-0032).
 
 ## Notes for the next session
 This is a multi-week-scale build (8 phases, ~90 tables, full offline sync engine). Work proceeds phase by phase with real commits/tags per phase; do not assume later phases are done just because this file exists — check the "Current phase" line above and the latest `docs/reports/phase-N.md`.

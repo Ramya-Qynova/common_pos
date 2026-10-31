@@ -47,6 +47,12 @@ class PlatformSettingsSeeder extends Seeder
 
             ['returns.require_inspection', true, 'boolean', null, null],
 
+            ['pos.variable_weight_barcode', [
+                'enabled' => false, 'prefix' => '2', 'total_length' => 13,
+                'product_code_start' => 1, 'product_code_length' => 5,
+                'value_start' => 6, 'value_length' => 5, 'value_decimal_places' => 3, 'embeds' => 'weight',
+            ], 'json', null, 'EAN-13-style variable-weight barcode format (section 9 BarcodeScanner adapter). Disabled by default - a template or tenant enables and configures it as data, not code.'],
+
             ['shift.cash_difference_tolerance', '5.00', 'string', null, null],
             ['shift.close_requires_empty_sync_queue', true, 'boolean', null, null],
 

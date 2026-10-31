@@ -99,6 +99,21 @@ Known gaps this phase (tracked, not silently skipped): no `discount_rules` condi
 
 Known gaps this phase (tracked, not silently skipped, D-0024–D-0028): damaged-condition returns are a write-off with no dedicated damaged-stock location; no `exchange` service (return+sale composition); no export-center job execution; no notification/alert delivery; `outstanding` has no ageing-bucket breakdown; PO receiving matches lines by product+variant, not a specific PO line ID; `DailyClosingService::reopen()` has no automatic reversing-entry mechanism for post-reopen corrections.
 
+## Phase 6
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Template data drives the full grocery flow with NO grocery-specific code branches (section 12 Phase 6 exit gate) | [database/seeders/TemplatesSeeder.php](../backend/database/seeders/TemplatesSeeder.php)'s `grocery` entry (pure data) + [app/Services/Onboarding/TemplateUpdateService.php](../backend/app/Services/Onboarding/TemplateUpdateService.php) (the one generic mechanism both templates use) | `tests/Feature/Templates/GroceryTemplateTest.php` — all 5 tests, including the explicit "same code, different data, no grocery leakage" test against `general_retail` |
+| Weighing: variable-weight barcodes decode per a tenant-configurable format, gated by the `weighing` module flag (not a template check) | [app/Services/Catalogue/VariableWeightBarcodeService.php](../backend/app/Services/Catalogue/VariableWeightBarcodeService.php) | `tests/Feature/Catalogue/VariableWeightBarcodeServiceTest.php` — decode test, module-gating negative test (same barcode, `general_retail` tenant → null), fixed-barcode-works-everywhere test |
+| A weight-derived fractional quantity reaches an ordinary sale with zero grocery-specific sale code (G3) | `SaleService`/`PricingEngine` (Phase 4, unchanged) fed a barcode-resolved quantity | `VariableWeightBarcodeServiceTest` — "...feeds straight into a normal sale..." |
+| Daily rate update: a generic bulk price change, not grocery-gated | [app/Services/Catalogue/PriceListService.php](../backend/app/Services/Catalogue/PriceListService.php) `bulkSetPrices()` | `tests/Feature/Catalogue/PriceListBulkUpdateTest.php` |
+| Wastage: the exact same generic stock-adjustment path works for any tenant, now reachable over HTTP for the first time | [app/Http/Controllers/Api/V1/StockAdjustmentController.php](../backend/app/Http/Controllers/Api/V1/StockAdjustmentController.php) wrapping Phase 2's `StockAdjustmentService` | `tests/Feature/Inventory/WastageAdjustmentTest.php` — grocery tenant, general_retail tenant (identical request), missing-reason rejection |
+| Template snapshot + update preview (section 12 Phase 6 build list) | `TemplateUpdateService::preview()`/`apply()` | `GroceryTemplateTest` — idempotent re-apply test + the version-2-preview/apply test (publishes a real new `TemplateVersion`, previews the diff, applies it) |
+| `EnsureModuleEnabled` middleware's underlying mechanism (`Tenant::isModuleEnabled()`, built Phase 1, never exercised until now) actually gates behaviour | `VariableWeightBarcodeService::resolve()` | `VariableWeightBarcodeServiceTest` — module-gating negative test |
+| Dynamic-Only Rule check still passes against all new Phase 6 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-6.md` |
+
+Known gaps this phase (tracked, not silently skipped, D-0029–D-0033): `OnboardingService::createTenant()` itself still only applies modules+roles (catalogue data comes from a separate `TemplateUpdateService::apply()` call, by design); no EAN-13 check-digit validation on variable-weight barcodes; no frontend hardware adapter implementations (ReceiptPrinter/WeighingScale/BarcodeScanner device code) - `hardware_profiles` CRUD is server-config-only; hardware-profile and template-update permissions reuse existing codes rather than adding new ones.
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |

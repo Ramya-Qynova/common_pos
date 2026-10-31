@@ -4,6 +4,7 @@ namespace App\Services\Catalogue;
 
 use App\Models\PriceListItem;
 use App\Models\ProductPrice;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -49,6 +50,33 @@ class PriceListService
             );
 
             return $item;
+        });
+    }
+
+    /**
+     * section 12 Phase 6 "daily rate update" - a generic bulk price change
+     * usable by any tenant/template (a vegetable shop happens to use this
+     * every morning; nothing here is specific to that). One transaction,
+     * one audit entry for the whole batch, each line going through the
+     * exact same history-preserving setPrice() a single change would.
+     *
+     * @param  array<int,array{product_id:int,variant_id?:int|null,unit_id:int,price:string}>  $updates
+     * @return array<int,PriceListItem>
+     */
+    public function bulkSetPrices(int $tenantId, int $priceListId, array $updates, int $userId): array
+    {
+        return DB::transaction(function () use ($tenantId, $priceListId, $updates, $userId) {
+            $effectiveFrom = now();
+            $items = array_map(
+                fn (array $u) => $this->setPrice($tenantId, $priceListId, $u['product_id'], $u['variant_id'] ?? null, $u['unit_id'], $u['price'], $effectiveFrom),
+                $updates,
+            );
+
+            AuditLogger::log($tenantId, $userId, 'price_list.bulk_updated', 'PriceList', $priceListId, null, [
+                'item_count' => count($items), 'product_ids' => array_column($updates, 'product_id'),
+            ]);
+
+            return $items;
         });
     }
 

@@ -105,3 +105,9 @@ All in `backend/database/migrations/2025_05_01_*`, in this file order:
 - `daily_closings` — finance — one row per branch per business date; `open`/`closed`/`reopened`, reopening gated by `finance.reopen` (`2025_05_01_000003_create_daily_closings_table.php`)
 
 No new tables for reports — `ReportService` reads existing sales/returns/ledger/stock tables only (section 8 "Reports read committed records only"). See `docs/DECISIONS.md` D-0024–D-0028 for this phase's scope decisions (damaged-stock write-off instead of a dedicated location, no exchange/export/notification delivery, no ageing buckets, PO-line matching by product+variant).
+
+### Phase 6
+
+- `barcodes.type` — catalogue — new column (`fixed` default | `variable_weight`), not a new table (`2025_06_01_000001_add_type_to_barcodes_table.php`). A `variable_weight` row stores only the barcode's fixed prefix (prefix + product code); the weight-encoded suffix is decoded per-scan by `VariableWeightBarcodeService`, never stored.
+
+No other new tables this phase — the grocery template, hardware profiles, and the daily-rate bulk update all run on schema that already existed (`template_versions`/`tenant_template_snapshot` since Phase 1, `hardware_profiles` since Phase 1, `price_list_items`/`product_prices` since Phase 2). See `docs/DECISIONS.md` D-0029–D-0033 for this phase's scope decisions (template-application mechanism lives in `TemplateUpdateService`, not onboarding itself; no EAN-13 check-digit validation; hardware adapters are server-config-only, frontend device code deferred; permission codes reused rather than added).

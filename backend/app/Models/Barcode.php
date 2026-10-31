@@ -9,7 +9,7 @@ class Barcode extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['tenant_id', 'product_id', 'variant_id', 'unit_id', 'barcode', 'is_primary'];
+    protected $fillable = ['tenant_id', 'product_id', 'variant_id', 'unit_id', 'barcode', 'type', 'is_primary'];
 
     protected function casts(): array
     {
