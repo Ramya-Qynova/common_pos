@@ -39,7 +39,7 @@ Phase 1 — Tenancy, identity, settings, onboarding: **complete**, tagged `phase
 - `GET /tenant/config` doesn't yet return translations/tax/payment-method/document-template data — those are added as their owning phase gives them real service logic.
 - Numbering, tax, payment methods, lookups, custom fields, document templates, hardware profiles, offline policies, rule tables, and approvals have schema + models only, no service logic yet (by design — see phase table).
 - Frontend auth tokens live in plain `localStorage` (D-0011) pending Phase 7's encrypted IndexedDB mechanism.
-- CI workflow still not observed running inside GitHub Actions itself (only run locally) — will confirm on this phase's push.
+- ~~CI workflow not observed running inside GitHub Actions~~ — confirmed: both the Phase 0 and Phase 1 pushes ran `CI` on GitHub Actions and completed successfully (checked via the Actions tab after pushing `phase-1-complete`).
 
 ## Notes for the next session
 This is a multi-week-scale build (8 phases, ~80 tables, full offline sync engine). Work proceeds phase by phase with real commits/tags per phase; do not assume later phases are done just because this file exists — check the "Current phase" line above and the latest `docs/reports/phase-N.md`.
