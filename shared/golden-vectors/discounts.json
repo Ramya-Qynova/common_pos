@@ -1,0 +1,72 @@
+[
+  {
+    "id": "line-discount-percent-then-tax",
+    "description": "A 10% line discount is applied before tax is computed on the discounted amount.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "100.0000",
+          "quantity": "1.0000",
+          "line_discount": { "type": "percent", "value": "10.0000" },
+          "tax_group": "gst18_exclusive"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "gst18_exclusive": {
+          "mode": "exclusive",
+          "components": [{ "code": "GST", "rate": "18.0000" }]
+        }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "0.0100" }
+    },
+    "expected": {
+      "line_subtotal": "100.0000",
+      "discount_total": "10.0000",
+      "taxable_amount": "90.0000",
+      "tax_breakdown": [{ "code": "GST", "amount": "16.2000" }],
+      "tax_total": "16.2000",
+      "pre_rounding_total": "106.2000",
+      "grand_total": "106.2000",
+      "rounding_adjustment": "0.0000"
+    }
+  },
+  {
+    "id": "invoice-discount-amount-prorated-across-lines",
+    "description": "A flat invoice-level discount is prorated across two lines by line value before tax, per line's own tax group.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "300.0000",
+          "quantity": "1.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "gst18_exclusive"
+        },
+        {
+          "unit_price": "100.0000",
+          "quantity": "1.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "gst18_exclusive"
+        }
+      ],
+      "invoice_discount": { "type": "amount", "value": "40.0000" },
+      "tax_groups": {
+        "gst18_exclusive": {
+          "mode": "exclusive",
+          "components": [{ "code": "GST", "rate": "18.0000" }]
+        }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "0.0100" }
+    },
+    "expected": {
+      "line_subtotal": "400.0000",
+      "discount_total": "40.0000",
+      "taxable_amount": "360.0000",
+      "tax_breakdown": [{ "code": "GST", "amount": "64.8000" }],
+      "tax_total": "64.8000",
+      "pre_rounding_total": "424.8000",
+      "grand_total": "424.8000",
+      "rounding_adjustment": "0.0000"
+    }
+  }
+]

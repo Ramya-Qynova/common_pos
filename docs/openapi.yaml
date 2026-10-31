@@ -1,0 +1,169 @@
+openapi: 3.0.3
+info:
+  title: Advanced Universal POS API
+  version: "0.1.0-phase0"
+  description: >
+    Skeleton only (Phase 0). Endpoint groups are enumerated in
+    docs/MASTER_PROMPT.md section 10; each is filled in with full
+    request/response schemas as its owning phase lands (see the phase table
+    in section 12). This file should eventually be generated from code
+    (annotations/route introspection), not hand-maintained indefinitely -
+    that generator is a Phase 1 task alongside the auth endpoints below.
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+tags:
+  - name: Auth
+  - name: Configuration
+  - name: Platform
+  - name: Setup
+  - name: Catalogue
+  - name: Inventory
+  - name: POS
+  - name: Returns
+  - name: Payments
+  - name: Purchasing
+  - name: Customers
+  - name: Finance
+  - name: Approvals
+  - name: Reports
+  - name: Sync
+  - name: Security
+  - name: Integrations
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate with tenant login identifiers and issue tokens (Phase 1).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier:
+                  type: string
+                  description: Shop code + username, or phone/e-mail if enabled per tenant (auth.login_identifiers).
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Login succeeded; see components.schemas.ApiSuccess.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiSuccess" }
+        "401":
+          description: Generic invalid-credentials error (never reveals which field was wrong).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /tenant/config:
+    get:
+      tags: [Configuration]
+      summary: Resolved config snapshot for the authenticated user (Phase 1).
+      description: >
+        Modules/menu, branches, settings, tax rules, units, payment methods,
+        permissions, translations, document templates, hardware profiles,
+        and offline policy - scoped to what this user may see.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiSuccess" }
+  /sales:
+    post:
+      tags: [POS]
+      summary: Create a sale (Phase 4). Backend recalculates all prices/tax/totals (G1).
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Sale created (or idempotent replay).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiSuccess" }
+        "409":
+          description: INSUFFICIENT_STOCK, CONFLICT, SHIFT_REQUIRED, or CREDIT_LIMIT_EXCEEDED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+        "422":
+          description: VALIDATION_FAILED or IDEMPOTENCY_KEY_REUSED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /sync/push:
+    post:
+      tags: [Sync]
+      summary: Batched offline operation push (Phase 7); see docs/sync-design.md.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Per-operation outcomes (accepted/rejected/conflict).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiSuccess" }
+components:
+  schemas:
+    ApiSuccess:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: {}
+        meta:
+          type: object
+          properties:
+            page: { type: integer }
+            per_page: { type: integer }
+            total: { type: integer }
+    ApiError:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_FAILED
+                - UNAUTHENTICATED
+                - FORBIDDEN
+                - NOT_FOUND
+                - INSUFFICIENT_STOCK
+                - IDEMPOTENCY_KEY_REUSED
+                - CONFLICT
+                - VERSION_CONFLICT
+                - APPROVAL_REQUIRED
+                - SHIFT_REQUIRED
+                - CREDIT_LIMIT_EXCEEDED
+                - PAYMENT_FAILED
+                - MODULE_DISABLED
+                - TENANT_SUSPENDED
+                - SUBSCRIPTION_EXPIRED
+                - RATE_LIMITED
+                - SERVER_ERROR
+            message_key: { type: string }
+            message: { type: string }
+            fields: { type: object }
+            details: { type: object }
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+security:
+  - bearerAuth: []

@@ -1,0 +1,110 @@
+[
+  {
+    "id": "tax-exclusive-single-component",
+    "description": "One line, 18% GST exclusive, single tax component, no discounts.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "100.0000",
+          "quantity": "2.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "gst18_exclusive_single"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "gst18_exclusive_single": {
+          "mode": "exclusive",
+          "components": [{ "code": "GST", "rate": "18.0000" }]
+        }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "0.0100" }
+    },
+    "expected": {
+      "line_subtotal": "200.0000",
+      "discount_total": "0.0000",
+      "taxable_amount": "200.0000",
+      "tax_breakdown": [{ "code": "GST", "amount": "36.0000" }],
+      "tax_total": "36.0000",
+      "pre_rounding_total": "236.0000",
+      "grand_total": "236.0000",
+      "rounding_adjustment": "0.0000"
+    }
+  },
+  {
+    "id": "tax-inclusive-single-component",
+    "description": "One line, price is GST-inclusive at 18%; tax must be backed out of the unit price, not added on top.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "118.0000",
+          "quantity": "1.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "gst18_inclusive_single"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "gst18_inclusive_single": {
+          "mode": "inclusive",
+          "components": [{ "code": "GST", "rate": "18.0000" }]
+        }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "0.0100" }
+    },
+    "expected": {
+      "line_subtotal": "118.0000",
+      "discount_total": "0.0000",
+      "taxable_amount": "100.0000",
+      "tax_breakdown": [{ "code": "GST", "amount": "18.0000" }],
+      "tax_total": "18.0000",
+      "pre_rounding_total": "118.0000",
+      "grand_total": "118.0000",
+      "rounding_adjustment": "0.0000"
+    }
+  },
+  {
+    "id": "tax-exclusive-multi-component-cgst-sgst",
+    "description": "Indian GST intra-state split: CGST 9% + SGST 9% = 18%, exclusive, two lines.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "50.0000",
+          "quantity": "3.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "gst18_cgst_sgst"
+        },
+        {
+          "unit_price": "20.0000",
+          "quantity": "5.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "gst18_cgst_sgst"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "gst18_cgst_sgst": {
+          "mode": "exclusive",
+          "components": [
+            { "code": "CGST", "rate": "9.0000" },
+            { "code": "SGST", "rate": "9.0000" }
+          ]
+        }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "0.0100" }
+    },
+    "expected": {
+      "line_subtotal": "250.0000",
+      "discount_total": "0.0000",
+      "taxable_amount": "250.0000",
+      "tax_breakdown": [
+        { "code": "CGST", "amount": "22.5000" },
+        { "code": "SGST", "amount": "22.5000" }
+      ],
+      "tax_total": "45.0000",
+      "pre_rounding_total": "295.0000",
+      "grand_total": "295.0000",
+      "rounding_adjustment": "0.0000"
+    }
+  }
+]

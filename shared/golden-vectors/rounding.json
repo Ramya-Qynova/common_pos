@@ -1,0 +1,89 @@
+[
+  {
+    "id": "cash-rounding-nearest-1-round-up",
+    "description": "Cash rounding step of 1.00 (no coins smaller than 1 unit accepted); 236.40 rounds up to 236.00? No - nearest step: 236.40 -> 236.00 is 0.40 away, 237.00 is 0.60 away, so rounds down to 236.00.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "118.2000",
+          "quantity": "2.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "no_tax"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "no_tax": { "mode": "exclusive", "components": [] }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "1.0000" }
+    },
+    "expected": {
+      "line_subtotal": "236.4000",
+      "discount_total": "0.0000",
+      "taxable_amount": "236.4000",
+      "tax_breakdown": [],
+      "tax_total": "0.0000",
+      "pre_rounding_total": "236.4000",
+      "grand_total": "236.0000",
+      "rounding_adjustment": "-0.4000"
+    }
+  },
+  {
+    "id": "cash-rounding-nearest-1-half-up-boundary",
+    "description": "Exact midpoint (236.50 with a 1.00 step) resolves up under half_up rounding mode.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "236.5000",
+          "quantity": "1.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "no_tax"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "no_tax": { "mode": "exclusive", "components": [] }
+      },
+      "rounding": { "mode": "half_up", "cash_step": "1.0000" }
+    },
+    "expected": {
+      "line_subtotal": "236.5000",
+      "discount_total": "0.0000",
+      "taxable_amount": "236.5000",
+      "tax_breakdown": [],
+      "tax_total": "0.0000",
+      "pre_rounding_total": "236.5000",
+      "grand_total": "237.0000",
+      "rounding_adjustment": "0.5000"
+    }
+  },
+  {
+    "id": "cash-rounding-nearest-1-half-even-boundary",
+    "description": "Same exact midpoint (236.50) but under half_even (banker's rounding) mode resolves to the nearest even step multiple, 236.00.",
+    "input": {
+      "lines": [
+        {
+          "unit_price": "236.5000",
+          "quantity": "1.0000",
+          "line_discount": { "type": "none", "value": "0.0000" },
+          "tax_group": "no_tax"
+        }
+      ],
+      "invoice_discount": { "type": "none", "value": "0.0000" },
+      "tax_groups": {
+        "no_tax": { "mode": "exclusive", "components": [] }
+      },
+      "rounding": { "mode": "half_even", "cash_step": "1.0000" }
+    },
+    "expected": {
+      "line_subtotal": "236.5000",
+      "discount_total": "0.0000",
+      "taxable_amount": "236.5000",
+      "tax_breakdown": [],
+      "tax_total": "0.0000",
+      "pre_rounding_total": "236.5000",
+      "grand_total": "236.0000",
+      "rounding_adjustment": "-0.5000"
+    }
+  }
+]
