@@ -5,6 +5,7 @@ use App\Exceptions\ApiException;
 use App\Exceptions\AuthenticationFailedException;
 use App\Http\Middleware\AuthenticateTenant;
 use App\Http\Middleware\EnsureBranchAccess;
+use App\Http\Middleware\EnsureIdempotent;
 use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureTenantActive;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'module' => EnsureModuleEnabled::class,
             'permission' => EnsurePermission::class,
             'branch' => EnsureBranchAccess::class,
+            'idempotent' => EnsureIdempotent::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

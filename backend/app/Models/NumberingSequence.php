@@ -9,5 +9,5 @@ class NumberingSequence extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['tenant_id', 'series', 'device_id', 'fiscal_year', 'prefix', 'next_number'];
+    protected $fillable = ['tenant_id', 'series', 'device_id', 'device_key', 'fiscal_year', 'fiscal_year_key', 'prefix', 'next_number'];
 }

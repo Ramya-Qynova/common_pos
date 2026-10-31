@@ -85,3 +85,13 @@ All in `backend/database/migrations/2025_03_01_*`, in this file order:
 - `expense_categories`, `expenses` — finance — `ExpenseService` optionally links an expense to an open shift, creating a matching `cash_movements` row (`2025_03_01_000006_create_expense_tables.php`)
 
 **`cashier_shifts.open_register_marker`**: see `docs/DECISIONS.md` D-0018 — a nullable-unique column (NULL when closed, the register's own ID when open) that turns "one open shift per register" into a real, race-proof DB constraint rather than an application-level check.
+
+### Phase 4
+
+- `numbering_sequences` uniqueness fix — a NEW migration (`2025_04_01_000000_add_uniqueness_to_numbering_sequences.php`), not an edit to the Phase 1 file (rule 1.12) — adds `fiscal_year_key`/`device_key` bucket columns and the unique constraint that table should have had from the start (D-0020).
+- `idempotency_keys` — operations — G6's key+request-hash+stored-response table (`2025_04_01_000001_create_idempotency_keys_table.php`)
+- `sales`, `sale_items`, `sale_item_taxes`, `sale_discounts` — sales — server-computed only; no column here is ever filled from a client-submitted price/total (G1) (`2025_04_01_000002_create_sales_tables.php`)
+- `invoices`, `sale_payments`, `payment_transactions` — sales — invoice numbers from the locked `numbering_sequences` row; `payment_transactions` tracks provider-facing status separately from the payment amount itself (`2025_04_01_000003_create_invoice_payment_tables.php`)
+- `held_sales`, `held_sale_items` — sales — line selections only, never a price (resuming re-prices through the normal `SaleService::create()` path) (`2025_04_01_000004_create_held_sales_tables.php`)
+
+All in `backend/database/migrations/2025_04_01_*`, in this file order (the uniqueness-fix migration is numbered `000000` to sort before the others, since it patches a Phase 1 table used by this phase's own `NumberingService`).

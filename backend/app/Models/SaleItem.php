@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+/**
+ * @property int $product_id
+ * @property string $quantity DECIMAL(18,4) as a string (G3).
+ * @property string $unit_price DECIMAL(18,4) as a string (G3).
+ * @property string $line_total DECIMAL(18,4) as a string (G3).
+ */
+class SaleItem extends Model
+{
+    protected $fillable = [
+        'sale_id', 'product_id', 'variant_id', 'batch_id', 'unit_id', 'quantity', 'unit_price',
+        'line_discount_amount', 'taxable_amount', 'tax_amount', 'line_total', 'cost_snapshot', 'price_source',
+    ];
+
+    public function taxes(): HasMany
+    {
+        return $this->hasMany(SaleItemTax::class);
+    }
+}

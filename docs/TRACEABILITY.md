@@ -66,6 +66,22 @@ Known gaps this phase (tracked, not silently skipped): no catalogue/inventory fr
 
 Known gaps this phase (tracked, not silently skipped): no customer/supplier/shift/expense frontend screens built (D-0019); customer/supplier debits this phase come only from opening-balance/manual-adjustment entries - Phase 4's sales and Phase 5's purchase receiving will post their own debit rows into the same ledger tables (D-0016), and Phase 4/5's cash-sale/cash-refund flows will post into `cash_movements` automatically instead of by hand (D-0017); `customer_payments`/`supplier_payments` support explicit allocation via `allocate()` but nothing auto-allocates FIFO yet (not required by this phase's exit gate).
 
+## Phase 4
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Pricing engine: both PHP and JS pass every golden vector (section 12 Phase 4 exit gate, section 9) | [app/Services/Pricing/PricingEngine.php](../backend/app/Services/Pricing/PricingEngine.php), [frontend/src/pricing/pricingEngine.js](../frontend/src/pricing/pricingEngine.js) | `tests/Feature/Pricing/PricingEngineGoldenVectorTest.php` (8/8) + `frontend/src/pricing/pricingEngine.test.js` (8/8) — both load the identical files in `shared/golden-vectors/` |
+| Per-line tax detail (needed for `sale_items`/`sale_item_taxes`, not just invoice totals) | `PricingEngine::calculate()`'s `lines` output | `tests/Feature/Pricing/PricingEnginePerLineTest.php` |
+| Server ignores client-submitted prices/totals (section 12 Phase 4 exit gate, G1) | [app/Services/Sales/SaleService.php](../backend/app/Services/Sales/SaleService.php) `resolveLine()` never reads a client price | `tests/Feature/Sales/SaleCreationTest.php` — "server ignores a client-submitted price override..." |
+| A failed sale leaves nothing (section 12 Phase 4 exit gate, G4) | `SaleService::create()` - one DB transaction, stock locked before any row is written | `SaleCreationTest` — "a failed sale (insufficient stock) leaves nothing behind..." |
+| Idempotency: same key replays with no duplicates, different payload rejected (section 12 Phase 4 exit gate, G6) | [app/Http/Middleware/EnsureIdempotent.php](../backend/app/Http/Middleware/EnsureIdempotent.php) | `SaleCreationTest` — replay test + `IDEMPOTENCY_KEY_REUSED` test + missing-header test |
+| Invoice numbers generated under a locked sequence row (section 7 "invoices") | [app/Services/Sales/NumberingService.php](../backend/app/Services/Sales/NumberingService.php) | `SaleCreationTest` — "a sale is created... and generates an invoice"; race-safety fix documented in D-0020 |
+| Discount requires `pos.sales.discount` permission or creates an approval request (section 8 step 4) | `SaleService::create()`'s discount-permission gate | `SaleCreationTest` — "a cashier without pos.sales.discount cannot complete a discounted sale..." / "...can complete a discounted sale directly" |
+| Held bills store line selections only, never a price; resuming re-prices through the normal path (section 7, G1) | [app/Services/Sales/HeldSaleService.php](../backend/app/Services/Sales/HeldSaleService.php) | `tests/Feature/Sales/HeldSaleServiceTest.php` |
+| Dynamic-Only Rule check still passes against all new Phase 4 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-4.md` |
+
+Known gaps this phase (tracked, not silently skipped): no `discount_rules` condition evaluator (permission-only gating, D-0021); no payment-provider adapters, manual_confirm flow, or webhook endpoint (only cash/credit payment methods, D-0022); no receipt rendering/browser print; no frontend POS cart screen or outbox queue (D-0022) — sale creation is fully real and tested via the HTTP API, but there is no UI to drive it yet.
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |

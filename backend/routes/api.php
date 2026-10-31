@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\TenantConfigController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,5 +13,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::get('/tenant/config', [TenantConfigController::class, 'show']);
+
+        Route::post('/sales', [SaleController::class, 'store'])->middleware(['permission:pos.sales.create', 'idempotent']);
     });
 });
