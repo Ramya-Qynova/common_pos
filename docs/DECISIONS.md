@@ -92,3 +92,24 @@ Context: section 2/12 scope Phase 2 as "Products, variants, units/conversions, b
 Decision: Phase 2 built only the backend (migrations, models, services, tests) for all of the above. No catalogue/inventory frontend screens were built this phase.
 Reason: Given the phase's own build list is backend-shaped (no UI items named), and the exit gate (section 12's Phase 2 row) is entirely about data correctness (balance=ledger sum, concurrency, import error reporting) rather than UI, backend-first was the more defensible reading. Flagged rather than silently assumed.
 Reversibility: n/a - catalogue/inventory screens are added in a later pass against this now-stable API surface; nothing here blocks that.
+
+## D-0016 | Phase 3 | Type: Assumption
+Context: section 8 "Ledgers and collections" says a payment "may be allocated to invoices." No sales invoice table exists yet (Phase 4) and no purchase/receiving table exists yet (Phase 5) - the normal real-world source of a customer/supplier debit.
+Decision: `customer_payment_allocations`/`supplier_payment_allocations` reference the ledger's own debit rows (`customer_ledger_id`/`supplier_ledger_id`) directly, not a separate "invoices" table. This phase's debits come from `opening_balance`/`manual_adjustment` entries; a Phase 4 sale or Phase 5 purchase receipt will insert its own debit row into the exact same `customer_ledger`/`supplier_ledger` table (via `source_type` = `sale`/`purchase`), allocatable through the identical mechanism with no schema change.
+Reason: A debit ledger row IS the thing owed, regardless of what created it - charging the ledger table rather than a type-specific "invoices" table keeps allocation, balance-equals-sum, and over-allocation-rejection working identically whether the debit came from an opening balance typed in today or a sale posted in Phase 4.
+Reversibility: n/a - this is the permanent design, not a placeholder; Phase 4/5 only need to insert ledger rows with the right `source_type`/`source_id`, not change this mechanism.
+
+## D-0017 | Phase 3 | Type: Deviation
+Context: section 8 "Shifts and cash": "Expected cash = opening cash + cash received (net of change) - cash refunds - cash expenses + cash in - cash out." The "cash received" and "cash refunds" terms normally come from completed sales and returns, neither of which exist until Phase 4/5.
+Decision: Built the real formula and the real `cash_movements` typed-row mechanism (`cash_sale`, `cash_refund`, `expense`, `cash_in`, `cash_out`, `opening`) and tested it by recording movements directly. Phase 4's sale-completion flow and Phase 5's return flow will create `cash_sale`/`cash_refund` rows automatically instead of a test creating them by hand - no change to `ShiftService::close()` itself.
+Reversibility: n/a - the formula is complete and phase-agnostic; only the *source* of `cash_sale`/`cash_refund` rows changes (manual today, automatic from Phase 4/5 onward).
+
+## D-0018 | Phase 3 | Type: Deviation
+Context: "One open shift per register" (section 8) needs a real DB constraint, not just an application check, to be race-proof - but a plain unique index on `(register_id)` would also block a *closed* shift's row from ever coexisting with a later *open* one on the same register (there's only ever one row per register total, forever).
+Decision: Added `open_register_marker` (nullable, unique) to `cashier_shifts`: set to the register's ID only while `status = 'open'`, set back to `NULL` on close. Multiple `NULL`s coexist freely (every closed shift), but two rows can never share the same non-NULL value - so "one open shift per register" is a real, concurrency-safe unique constraint, using the same nullable-unique pattern as `stock_balances.variant_key`/`batch_key` (D-0013) turned to its advantage instead of worked around.
+Reversibility: Pure implementation detail; any query that filters by `status`/`register_id` directly is unaffected.
+
+## D-0019 | Phase 3 | Type: Deviation
+Context: Same as D-0015 - Phase 3's own build list (customers/groups, suppliers, ledgers, collections+allocation, loyalty basics, shifts, cash movements, expenses) is backend-shaped.
+Decision: Phase 3 built backend only (migrations, models, services, tests) - no customer/supplier/shift/expense frontend screens (CUS-xx, FIN-xx).
+Reversibility: n/a - added in a later pass against this stable API surface.

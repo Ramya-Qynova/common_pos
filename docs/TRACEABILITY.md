@@ -50,6 +50,22 @@ Known gaps this phase (not silently skipped — tracked in `docs/OPEN_QUESTIONS.
 
 Known gaps this phase (tracked, not silently skipped): no catalogue/inventory frontend screens built (D-0015); `cost_layers`/FIFO is schema-only (weighted average is the only costing method with real logic, per section 1.2's own permission to defer FIFO); export jobs are schema-only (no real export logic); approval-rule integration for adjustments requiring sign-off is not wired up (the rule engine itself has no evaluator yet, carried over from Phase 1) — every adjustment posts immediately, `StockAdjustment.approved_by` stays unset until that lands.
 
+## Phase 3
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Customer ledger balance always equals the sum of its entries (section 12 Phase 3 exit gate) | [app/Services/Customers/CustomerLedgerService.php](../backend/app/Services/Customers/CustomerLedgerService.php) | `tests/Feature/Customers/CustomerLedgerServiceTest.php` — "the customer balance always equals the sum of their ledger entries" |
+| Supplier ledger balance (payable) always equals the sum of its entries | [app/Services/Purchasing/SupplierLedgerService.php](../backend/app/Services/Purchasing/SupplierLedgerService.php) | `tests/Feature/Purchasing/SupplierLedgerServiceTest.php` |
+| Payment allocation against an outstanding debit; over-allocation rejected (section 8 "Ledgers and collections") | `CustomerLedgerService::allocate()` / `SupplierLedgerService::allocate()` | Both test files - allocating beyond the debit's outstanding amount or the payment's unallocated remainder throws `ApiException` |
+| Loyalty points: earn/redeem, balance equals the sum of transactions, over-redemption rejected | [app/Services/Customers/LoyaltyService.php](../backend/app/Services/Customers/LoyaltyService.php) | `tests/Feature/Customers/LoyaltyServiceTest.php` |
+| Shift expected-cash matches the formula (section 12 Phase 3 exit gate, section 8 "Shifts and cash") | [app/Services/Finance/ShiftService.php](../backend/app/Services/Finance/ShiftService.php) | `tests/Feature/Finance/ShiftServiceTest.php` — "closing a shift computes expected cash via the formula..." and the cash-difference case |
+| One open shift per register (section 8) | `ShiftService::open()` + `cashier_shifts.open_register_marker` unique constraint (D-0018) | `ShiftServiceTest` — "only one shift can be open per register at a time" |
+| Closed shifts are immutable (section 12 Phase 3 exit gate) | `CashierShift::booted()` guard + `ShiftService::recordCashMovement()`'s open-check | `ShiftServiceTest` — "closed shifts are immutable: no further cash movement can be recorded, and the row itself cannot be re-saved" |
+| Expenses linked to a shift create a matching cash movement | [app/Services/Finance/ExpenseService.php](../backend/app/Services/Finance/ExpenseService.php) | `tests/Feature/Finance/ExpenseServiceTest.php` |
+| Dynamic-Only Rule check still passes against all new Phase 3 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-3.md` |
+
+Known gaps this phase (tracked, not silently skipped): no customer/supplier/shift/expense frontend screens built (D-0019); customer/supplier debits this phase come only from opening-balance/manual-adjustment entries - Phase 4's sales and Phase 5's purchase receiving will post their own debit rows into the same ledger tables (D-0016), and Phase 4/5's cash-sale/cash-refund flows will post into `cash_movements` automatically instead of by hand (D-0017); `customer_payments`/`supplier_payments` support explicit allocation via `allocate()` but nothing auto-allocates FIFO yet (not required by this phase's exit gate).
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |
@@ -57,4 +73,4 @@ Known gaps this phase (tracked, not silently skipped): no catalogue/inventory fr
 | AUTH-01 (Login) | `frontend/src/screens/LoginScreen.jsx` | Shop code + username + password, generic error message, lockout message |
 | n/a (post-login shell) | `frontend/src/screens/AppShell.jsx` | Not a numbered screen in the guide; the dynamic-menu shell every other screen will render inside, starting Phase 2 |
 
-The rest of section 11's catalogue (SA-xx, ON-xx, DASH-xx, POS-xx, SAL-xx, PRD-xx, INV-xx, PUR-xx, CUS-xx, FIN-xx, REP-xx, USR-xx, SET-xx, SYN-xx, TPL-VEG-xx, APR-xx, NOT-xx) has no screen yet — each is mapped here in the commit that actually builds it, starting with Phase 2's catalogue/inventory screens.
+The rest of section 11's catalogue (SA-xx, ON-xx, DASH-xx, POS-xx, SAL-xx, PRD-xx, INV-xx, PUR-xx, CUS-xx, FIN-xx, REP-xx, USR-xx, SET-xx, SYN-xx, TPL-VEG-xx, APR-xx, NOT-xx) has no screen yet — each is mapped here in the commit that actually builds it. Phase 2 and Phase 3 both built backend-only (D-0015, D-0019); a frontend pass against the now-stable catalogue/inventory/customer/supplier/shift API surface is still pending.

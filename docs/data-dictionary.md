@@ -72,3 +72,16 @@ All in `backend/database/migrations/2025_02_01_*`, in this file order:
 - `import_jobs`, `export_jobs` — operations — `ProductImportService`'s per-row accept/reject report; export is schema-only this phase (`2025_02_01_000006_create_import_export_job_tables.php`)
 
 **`stock_balances`/`product_prices` `variant_key`/`batch_key` columns**: see `docs/DECISIONS.md` D-0013 — these, not the nullable `variant_id`/`batch_id`, carry the actual uniqueness constraint, because NULL can't be uniquely constrained across MySQL/MariaDB/SQLite.
+
+### Phase 3
+
+All in `backend/database/migrations/2025_03_01_*`, in this file order:
+
+- `customer_groups`, `customers` — customers — master data (`2025_03_01_000001_create_customer_tables.php`)
+- `customer_ledger`, `customer_payments`, `customer_payment_allocations` — customers — append-only ledger + collections, allocating directly against the ledger's own debit rows (D-0016) (`2025_03_01_000002_create_customer_ledger_tables.php`)
+- `loyalty_accounts`, `loyalty_transactions` — customers — basic manual earn/redeem; sale-driven accrual lands in Phase 4 (`2025_03_01_000003_create_loyalty_tables.php`)
+- `suppliers`, `supplier_ledger`, `supplier_payments`, `supplier_payment_allocations` — purchases — the payable-side mirror of the customer ledger pair above (`2025_03_01_000004_create_supplier_tables.php`)
+- `cashier_shifts`, `cash_movements` — sales/finance — the expected-cash formula's typed-row source; see D-0018 for `open_register_marker` (`2025_03_01_000005_create_shift_cash_tables.php`)
+- `expense_categories`, `expenses` — finance — `ExpenseService` optionally links an expense to an open shift, creating a matching `cash_movements` row (`2025_03_01_000006_create_expense_tables.php`)
+
+**`cashier_shifts.open_register_marker`**: see `docs/DECISIONS.md` D-0018 — a nullable-unique column (NULL when closed, the register's own ID when open) that turns "one open shift per register" into a real, race-proof DB constraint rather than an application-level check.
