@@ -95,3 +95,13 @@ All in `backend/database/migrations/2025_03_01_*`, in this file order:
 - `held_sales`, `held_sale_items` — sales — line selections only, never a price (resuming re-prices through the normal `SaleService::create()` path) (`2025_04_01_000004_create_held_sales_tables.php`)
 
 All in `backend/database/migrations/2025_04_01_*`, in this file order (the uniqueness-fix migration is numbered `000000` to sort before the others, since it patches a Phase 1 table used by this phase's own `NumberingService`).
+
+### Phase 5
+
+All in `backend/database/migrations/2025_05_01_*`, in this file order:
+
+- `sale_cancellations`, `sale_returns`, `sale_return_items`, `refunds` — sales — cancellation reverses a whole sale within `sales.cancel_window`; returns are a requested/inspected/completed/rejected state machine with a refund computed from the original sale_item values (`2025_05_01_000001_create_sale_return_cancellation_refund_tables.php`)
+- `purchase_orders`, `purchase_order_items`, `purchases`, `purchase_items`, `purchase_returns`, `purchase_return_items` — purchases — optional PO → receiving posts stock in at received cost plus a `supplier_ledger` debit (closing D-0016/D-0022's loop); purchase returns reverse stock and post a supplier credit (`2025_05_01_000002_create_purchasing_receiving_tables.php`)
+- `daily_closings` — finance — one row per branch per business date; `open`/`closed`/`reopened`, reopening gated by `finance.reopen` (`2025_05_01_000003_create_daily_closings_table.php`)
+
+No new tables for reports — `ReportService` reads existing sales/returns/ledger/stock tables only (section 8 "Reports read committed records only"). See `docs/DECISIONS.md` D-0024–D-0028 for this phase's scope decisions (damaged-stock write-off instead of a dedicated location, no exchange/export/notification delivery, no ageing buckets, PO-line matching by product+variant).

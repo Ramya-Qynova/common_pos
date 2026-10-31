@@ -63,6 +63,31 @@ class ShiftService
         });
     }
 
+    /**
+     * "Reports (defined once)": this is the one definition of expected
+     * cash, read-only and non-destructive. close() below calls this same
+     * method rather than recomputing the formula a second time.
+     */
+    public function expectedCash(int $tenantId, int $shiftId): string
+    {
+        $shift = CashierShift::withoutTenantScope()->where('tenant_id', $tenantId)->where('id', $shiftId)->first();
+        if (! $shift) {
+            throw new ApiException('NOT_FOUND', 'Shift not found.', 404);
+        }
+
+        $sums = CashMovement::where('cashier_shift_id', $shift->id)
+            ->selectRaw('type, SUM(amount) as total')->groupBy('type')->pluck('total', 'type');
+
+        $expected = $shift->opening_cash;
+        $expected = bcadd($expected, (string) ($sums['cash_sale'] ?? '0'), 4);
+        $expected = bcsub($expected, (string) ($sums['cash_refund'] ?? '0'), 4);
+        $expected = bcsub($expected, (string) ($sums['expense'] ?? '0'), 4);
+        $expected = bcadd($expected, (string) ($sums['cash_in'] ?? '0'), 4);
+        $expected = bcsub($expected, (string) ($sums['cash_out'] ?? '0'), 4);
+
+        return $expected;
+    }
+
     public function close(int $tenantId, int $shiftId, string $countedCash, int $userId): CashierShift
     {
         return DB::transaction(function () use ($tenantId, $shiftId, $countedCash, $userId) {
@@ -72,15 +97,7 @@ class ShiftService
                 throw new ApiException('CONFLICT', 'This shift is not open.', 409);
             }
 
-            $sums = CashMovement::where('cashier_shift_id', $shift->id)
-                ->selectRaw('type, SUM(amount) as total')->groupBy('type')->pluck('total', 'type');
-
-            $expected = $shift->opening_cash;
-            $expected = bcadd($expected, (string) ($sums['cash_sale'] ?? '0'), 4);
-            $expected = bcsub($expected, (string) ($sums['cash_refund'] ?? '0'), 4);
-            $expected = bcsub($expected, (string) ($sums['expense'] ?? '0'), 4);
-            $expected = bcadd($expected, (string) ($sums['cash_in'] ?? '0'), 4);
-            $expected = bcsub($expected, (string) ($sums['cash_out'] ?? '0'), 4);
+            $expected = $this->expectedCash($tenantId, $shiftId);
 
             $shift->status = 'closed';
             $shift->open_register_marker = null;

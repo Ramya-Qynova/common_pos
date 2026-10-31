@@ -10,6 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $quantity DECIMAL(18,4) as a string (G3).
  * @property string $unit_price DECIMAL(18,4) as a string (G3).
  * @property string $line_total DECIMAL(18,4) as a string (G3).
+ * @property string $cost_snapshot DECIMAL(18,4) as a string (G3).
+ * @property string $taxable_amount DECIMAL(18,4) as a string (G3).
+ * @property string $tax_amount DECIMAL(18,4) as a string (G3).
+ * @property int|null $variant_id
+ * @property int|null $batch_id
  */
 class SaleItem extends Model
 {

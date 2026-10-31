@@ -82,6 +82,23 @@ Known gaps this phase (tracked, not silently skipped): no customer/supplier/shif
 
 Known gaps this phase (tracked, not silently skipped): no `discount_rules` condition evaluator (permission-only gating, D-0021); no payment-provider adapters, manual_confirm flow, or webhook endpoint (only cash/credit payment methods, D-0022); no receipt rendering/browser print; no frontend POS cart screen or outbox queue (D-0022) — sale creation is fully real and tested via the HTTP API, but there is no UI to drive it yet.
 
+## Phase 5
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Returns cannot exceed sold (section 12 Phase 5 exit gate) | [app/Services/Sales/SaleReturnService.php](../backend/app/Services/Sales/SaleReturnService.php) — fail-fast check in `requestReturn()` + authoritative row-locked check in `complete()` | `tests/Feature/Returns/SaleReturnServiceTest.php` — "a return cannot exceed the quantity actually sold" + "two returns... cannot together exceed what was sold" |
+| Refund uses original values (section 12 Phase 5 exit gate, G1) | `SaleReturnService::complete()` computes the refund from `sale_item.line_total`/quantity at the time of sale, never current prices | `SaleReturnServiceTest` — "...refund amount uses the ORIGINAL sale price, not a later price change" |
+| Reports match hand-computed fixtures (section 12 Phase 5 exit gate, section 8.13) | [app/Services/Reports/ReportService.php](../backend/app/Services/Reports/ReportService.php) — all 8 figures | `tests/Feature/Reports/ReportServiceTest.php` — "every report figure matches a hand-computed fixture" (gross/net sales, tax, COGS, gross profit, stock valuation, expected cash) + "outstanding sums each...CURRENT balance" |
+| Closed days need reopen permission (section 12 Phase 5 exit gate) | [app/Services/Finance/DailyClosingService.php](../backend/app/Services/Finance/DailyClosingService.php) `reopen()`, gated by `permission:finance.reopen` | `tests/Feature/Finance/DailyClosingServiceTest.php` — "a user without finance.reopen cannot reopen..." / "...can reopen" |
+| A business day cannot close while a shift remains open (section 8 "End of day") | `DailyClosingService::close()` | `DailyClosingServiceTest` — "the business day cannot be closed while a shift is still open..." |
+| Cancel reverses stock + payment + customer-ledger entries, gated by `sales.cancel_window` + permission/approval (section 8) | [app/Services/Sales/SaleCancellationService.php](../backend/app/Services/Sales/SaleCancellationService.php) | `tests/Feature/Returns/SaleCancellationServiceTest.php` — all 4 tests |
+| Purchasing: receiving posts stock in at received cost + a real `supplier_ledger` debit, closing D-0016/D-0022's loop (section 8 "Purchasing") | [app/Services/Purchasing/PurchaseReceivingService.php](../backend/app/Services/Purchasing/PurchaseReceivingService.php) | `tests/Feature/Purchasing/PurchaseReceivingServiceTest.php` — "receiving a purchase moves real stock in..." + PO status progression test |
+| Purchase returns cannot exceed what was received; reverse stock + post a supplier credit | [app/Services/Purchasing/PurchaseReturnService.php](../backend/app/Services/Purchasing/PurchaseReturnService.php) | `PurchaseReceivingServiceTest` — "a purchase return cannot exceed what was received..." |
+| A real bcmath truncation bug found and fixed (not after the fact — caught by the report fixture test on first run) | `SaleReturnService::complete()` and `ReportService::returnedAmounts()` — multiply-before-divide | See D-0023 |
+| Dynamic-Only Rule check still passes against all new Phase 5 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-5.md` |
+
+Known gaps this phase (tracked, not silently skipped, D-0024–D-0028): damaged-condition returns are a write-off with no dedicated damaged-stock location; no `exchange` service (return+sale composition); no export-center job execution; no notification/alert delivery; `outstanding` has no ageing-bucket breakdown; PO receiving matches lines by product+variant, not a specific PO line ID; `DailyClosingService::reopen()` has no automatic reversing-entry mechanism for post-reopen corrections.
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |
