@@ -70,7 +70,10 @@ export function calculate(input) {
     lines.push({ net, lineDiscount, taxGroup: taxGroups[line.tax_group] });
   }
 
-  const sumNet = lines.reduce((carry, l) => carry.plus(l.net).toDecimalPlaces(SCALE), new Decimal(0));
+  const sumNet = lines.reduce(
+    (carry, l) => carry.plus(l.net).toDecimalPlaces(SCALE),
+    new Decimal(0),
+  );
 
   const invoiceDiscount = discountAmount(input.invoice_discount, sumNet).toDecimalPlaces(SCALE);
   const discountTotal = lineDiscountTotal.plus(invoiceDiscount).toDecimalPlaces(SCALE);
@@ -122,7 +125,9 @@ export function calculate(input) {
         taxBreakdownOrder.push(component.code);
         taxBreakdownMap[component.code] = new Decimal(0);
       }
-      taxBreakdownMap[component.code] = taxBreakdownMap[component.code].plus(componentAmount).toDecimalPlaces(SCALE);
+      taxBreakdownMap[component.code] = taxBreakdownMap[component.code]
+        .plus(componentAmount)
+        .toDecimalPlaces(SCALE);
       lineTaxBreakdown.push({ code: component.code, amount: fmt(componentAmount) });
     }
 
