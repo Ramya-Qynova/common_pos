@@ -111,3 +111,13 @@ No new tables for reports — `ReportService` reads existing sales/returns/ledge
 - `barcodes.type` — catalogue — new column (`fixed` default | `variable_weight`), not a new table (`2025_06_01_000001_add_type_to_barcodes_table.php`). A `variable_weight` row stores only the barcode's fixed prefix (prefix + product code); the weight-encoded suffix is decoded per-scan by `VariableWeightBarcodeService`, never stored.
 
 No other new tables this phase — the grocery template, hardware profiles, and the daily-rate bulk update all run on schema that already existed (`template_versions`/`tenant_template_snapshot` since Phase 1, `hardware_profiles` since Phase 1, `price_list_items`/`product_prices` since Phase 2). See `docs/DECISIONS.md` D-0029–D-0033 for this phase's scope decisions (template-application mechanism lives in `TemplateUpdateService`, not onboarding itself; no EAN-13 check-digit validation; hardware adapters are server-config-only, frontend device code deferred; permission codes reused rather than added).
+
+### Phase 7
+
+All in `backend/database/migrations/2025_07_01_*`, in this file order:
+
+- `sync_operations` — operations — one row per client `operation_uuid` per tenant (unique), the dedupe key behind "resubmit same UUID -> earlier result" (section 13.2); `status` is `accepted`/`rejected`/`held`, never deleted (`2025_07_01_000001_create_sync_tables.php`)
+- `sync_conflicts` — operations — `STOCK_SHORTFALL`/`PRICE_MISMATCH`/`DATA_CHANGED`/`CLOCK_SKEW` rows against a `sync_operations` row, `open` until explicitly `resolved` (same migration)
+- `change_log` — operations — `id` doubles as the monotonic "version" `GET /sync/pull?since=` cursors on; deliberately scoped to `Product`/`ProductPrice` writes only, not every mutable table (D-0036) (same migration)
+
+No schema change for device-scoped offline numbering or revocation - `numbering_sequences.device_id`/`device_key` (Phase 1/D-0020) and `devices.is_revoked`/`revoked_at` (Phase 1) already existed; this phase is the first to actually use either for real. `sales.device_id`/`origin`/`client_created_at` (Phase 4 columns, never populated until now) are likewise now set for real by `SaleService::create()`'s offline path. See `docs/DECISIONS.md` D-0034–D-0042 for this phase's scope decisions (sync-push route exemption bug fix, device revocation's per-operation discrimination instead of a blanket block, change_log's narrow scope, price-mismatch never overriding the server total, no envelope hash verification, tenant-status-only suspension check, the frontend offline module built and tested standalone with no POS screen to wire it into yet, no PWA/service-worker or lock-screen UI, only `sale.create` has a real sync handler).

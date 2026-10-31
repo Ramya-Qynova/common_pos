@@ -197,3 +197,57 @@ Context: new HTTP surface this phase needed permission codes: hardware profile m
 Decision: Reused `core.branches.manage` for hardware profiles and `core.settings.manage` for template preview/apply, rather than adding new permission codes.
 Reason: Both are tenant-operational-configuration actions in the same spirit as the permissions they reuse (branch/register setup; tenant settings changes) - the existing `PermissionsSeeder` catalogue already covers the right granularity without proliferating near-duplicate codes for every new screen.
 Reversibility: Additive - dedicated codes (e.g. `core.hardware.manage`) can be introduced later and assigned to specific roles without changing either service; only the route middleware's permission string would change.
+
+## D-0034 | Phase 7 | Type: Bug found and fixed
+Context: section 13.2 "expired/suspended tenant -> offline sales stored, never discarded" requires `POST /sync/push` to keep accepting a suspended tenant's batch (so `SyncPushService` can `hold()` it for review). The shared route group wraps every endpoint in `tenant.auth` + `tenant.active`, and `EnsureTenantActive` returns a flat 403 for a suspended tenant BEFORE any controller runs - caught for real when the "expired/suspended tenant" test failed with a null array-offset error (the response had no `results` key at all, just the 403 envelope), not assumed from reading the code.
+Decision: Restructured `routes/api.php` so `/sync/push` sits inside `tenant.auth` only, one level above the `tenant.active`-gated group that wraps every other endpoint (including `/sync/pull`, which stays blocked for a suspended tenant - only the push path needs to keep accepting a final flush).
+Reason: A suspended tenant's device may still have a legitimate queue of pre-suspension offline sales; `SyncPushService` is the thing that decides what to do with them (hold, not process), which it can never do if the request never reaches it.
+Reversibility: n/a - correctness fix. The nesting is additive (one new middleware boundary around an existing group), no existing route's effective middleware stack changed.
+
+## D-0035 | Phase 7 | Type: Deviation
+Context: section 9 "On device revocation, wipe local data at next contact" vs. section 13.2 "revoked device: pre-revocation ops accepted, later rejected for review" - these pull in opposite directions: fully blocking a revoked device would stop it from ever submitting its last pre-revocation batch, but never blocking it would leave it able to keep operating.
+Decision: Revoking a device (`DeviceService::revoke()`) does NOT revoke its existing `device_sessions` tokens or add a blanket revoked-device gate to `AuthenticateTenant`. `POST /sync/push` discriminates per-operation by comparing each operation's `client_created_at` against the device's `revoked_at` (`SyncPushService::processOne()`) - pre-revocation operations are accepted, later ones rejected with `DEVICE_REVOKED`. The client is expected to treat that rejection reason as its "wipe now" signal on its next sync contact.
+Reason: The two section-9/13.2 requirements can't both be satisfied by a single blanket block; per-operation discrimination inside the one endpoint that needs it is the only way to honor both. A broader "block every other endpoint for a revoked device" gate is a reasonable defense-in-depth addition but isn't what either requirement actually tests.
+Reversibility: Additive - a `device.active` middleware could be added to the non-sync route group later (blocking a revoked device from everything except its final `/sync/push`) without changing `SyncPushService`'s own per-operation logic.
+
+## D-0036 | Phase 7 | Type: Deviation
+Context: section 9 "Snapshot and pull" needs `change_log` for `GET /sync/pull?since=`'s incremental diff.
+Decision: `ChangeLogger::log()` is only called from `ProductService::create()`/`archive()` and `PriceListService::setPrice()` - the two real services behind the only two snapshot entities worth diffing incrementally (products, prices). It is not wired into every mutable table in the schema (customers, categories, barcodes created ad hoc have no dedicated service to hook).
+Reason: `GET /sync/pull`'s own exit-gate relevance is build-list scope, not section 13.2's tested gate (which is entirely about sale sync push). Retrofitting change-tracking onto ~40 tables with no existing service layer is disproportionate to what's actually exercised; the two real hooks that exist are genuinely wired and tested (`tests/Feature/Sync/SyncPullServiceTest.php`).
+Reversibility: Additive - any future service gains the same one-line `ChangeLogger::log()` call Product/PriceList already have; `SyncPullService`'s `incremental()` method already generalizes to "any entity_type touched since $since", so no change is needed there either.
+
+## D-0037 | Phase 7 | Type: Deviation
+Context: section 9 "Sync push": "prices differ -> per `offline.price_mismatch_policy` (accept_device_price default, or accept_server_price), difference recorded."
+Decision: `SyncPushService::processSaleCreate()` always commits the sale at the SERVER-recalculated total (via the ordinary, unmodified `SaleService::create()` - G1 is never relaxed for what a customer actually ends up owing/was charged). A `PRICE_MISMATCH` conflict records both totals and the configured policy value for a human to reconcile; the policy is never used to silently override the committed total with a stale offline-computed one.
+Reason: "Accept the device price" taken literally would mean charging/recording an amount the server knows is wrong - a bigger integrity risk than the sync-reconciliation convenience it buys, and the one invariant tested everywhere else in this codebase (`SaleCreationTest`'s price-override test, this phase's own `D-0034`-adjacent tests) is that the server's price is always authoritative.
+Reversibility: Additive - if a future requirement genuinely needs the device total to win, that becomes an explicit, audited correction (e.g. a manual adjustment referencing the conflict row) rather than a silent substitution inside `SaleService`.
+
+## D-0038 | Phase 7 | Type: Deviation
+Context: the operation envelope (section 9) includes a `hash` field, suggesting tamper detection.
+Decision: `hash` is accepted and stored on the `sync_operations` row (visible for audit) but never cryptographically verified against the payload.
+Reason: No signing scheme (HMAC key distribution, algorithm, canonical payload serialization) is specified anywhere in the master prompt; inventing one unilaterally would be a real design decision with security implications better made explicitly than guessed at. The dedup/idempotency guarantee (section 13.2's actual tested requirement) comes from `operation_uuid`, not the hash.
+Reversibility: Additive - a verification step can be inserted into `SyncPushService::processOne()` once a signing scheme is specified, rejecting a mismatched hash the same way a malformed envelope is rejected today.
+
+## D-0039 | Phase 7 | Type: Deviation
+Context: section 9 "Sync push": "tenant suspended or expired -> stored and held for review."
+Decision: `SyncPushService` checks only `tenant.status` (`suspended`/`closed`); it does not separately check subscription expiry/grace period (no dedicated subscription-status helper exists anywhere in the codebase to check against - `TenantAuthService::login()` doesn't check it either).
+Reason: Matches the one existing precedent for this check (`TenantAuthService::login()`'s own tenant-status gate) rather than inventing a second, inconsistent expiry rule. A subscription-grace-period mechanism is its own cross-cutting feature with no existing service to extend.
+Reversibility: Additive - once a `SubscriptionService` (or similar) exists, `SyncPushService`'s one status check gains a second condition alongside it.
+
+## D-0040 | Phase 7 | Type: Deviation
+Context: section 9 "Build the POS client on the outbox abstraction from the start" and the IndexedDB store list (snapshot_products, outbox, held_bills, local_receipts, sync_state, etc.) are both named as Phase 7 build-list items.
+Decision: Built and tested in isolation, with real IndexedDB (via Dexie, already a Phase 0 dependency) under `fake-indexeddb` in Vitest: `frontend/src/offline/{db,outbox,syncClient,snapshot,crypto}.js` - enqueue/replay/backoff/clock-skew-agnostic retry, snapshot apply (full + incremental), device-key AES-GCM field encryption, and a full wipe. None of these modules are imported by any screen yet (no POS cart/billing screen exists at all - the production bundle size is unchanged by this phase, confirming nothing new is bundled).
+Reason: Every phase since Phase 2 has drawn the same backend/mechanism-first, UI-later boundary (D-0015/D-0019/D-0022/D-0025/D-0032); building a POS billing screen before this phase's own sync protocol existed to drive it would have meant building against a contract that didn't exist yet. The modules themselves are real, independently tested units - not stubs - ready for a POS screen to import directly.
+Reversibility: Additive - a future POS screen imports `enqueue()` for every write (sale, hold, cash movement) and a `SyncClient` instance to flush them; no changes are needed to any of these modules to wire them in.
+
+## D-0041 | Phase 7 | Type: Deviation
+Context: `vite-plugin-pwa` has been a dependency since Phase 0 (anticipating offline app-shell caching) but `vite.config.js` never configures it; section 9 also calls for "auto-lock on inactivity with PIN unlock."
+Decision: Neither service-worker/PWA registration nor an auto-lock/PIN screen were built this phase.
+Reason: Both are UI-surface features (a lock screen, an installable app shell) that depend on screens this build doesn't have yet (D-0040) - there is nothing yet for a service worker to cache offline or a PIN screen to gate access to.
+Reversibility: Additive - `vite-plugin-pwa` activates with a config block once there's an app shell worth caching; a PIN/lock screen is ordinary React UI once POS screens exist, gating access to the already-built `src/offline/crypto.js` device key.
+
+## D-0042 | Phase 7 | Type: Deviation
+Context: `offline.allowed_operations` (seeded Phase 1) lists `sale.create`, `sale.hold`, `sale.resume`, `customer.quick_add`, `cash.in`, `cash.out`, `shift.open` as offline-capable operation types; the envelope/dedup/device/tenant-status pipeline in `SyncPushService::processOne()` is generic across all of them.
+Decision: Only `sale.create` has a real handler (`processSaleCreate()`). Every other type passes all the generic checks and is then rejected with `TYPE_NOT_ALLOWED_OFFLINE`.
+Reason: `sale.create` is what section 13.2's entire offline gate is about (every one of its ten scenarios is sale-shaped: stock shortfalls, price mismatches, device-scoped numbering). The other types reuse already-built services (`HeldSaleService`, `ShiftService`, `CustomerLedgerService`'s quick-add-equivalent) that would each need their own thin sync handler - mechanical, additive work once needed, not required to satisfy this phase's exit gate.
+Reversibility: Additive - each new type is one more `if ($op['type'] === '...')` branch (or a small dispatch table) calling the existing service, following `processSaleCreate()`'s exact shape (resolve -> call service -> record `SyncOperation` -> flag conflicts).

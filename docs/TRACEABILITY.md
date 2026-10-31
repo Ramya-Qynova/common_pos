@@ -114,6 +114,27 @@ Known gaps this phase (tracked, not silently skipped, D-0024–D-0028): damaged-
 
 Known gaps this phase (tracked, not silently skipped, D-0029–D-0033): `OnboardingService::createTenant()` itself still only applies modules+roles (catalogue data comes from a separate `TemplateUpdateService::apply()` call, by design); no EAN-13 check-digit validation on variable-weight barcodes; no frontend hardware adapter implementations (ReceiptPrinter/WeighingScale/BarcodeScanner device code) - `hardware_profiles` CRUD is server-config-only; hardware-profile and template-update permissions reuse existing codes rather than adding new ones.
 
+## Phase 7
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Kill mid-sale/after submit → outbox survives, sale syncs once (section 13.2) | [frontend/src/offline/outbox.js](../frontend/src/offline/outbox.js) - a Dexie/IndexedDB-backed queue, durable by construction | `frontend/src/offline/outbox.test.js` — "outbox data survives a 'restart' - a brand new Dexie connection..." |
+| Sell offline then reconnect → every sale accepted once, correct numbers (section 13.2) | [app/Services/Sync/SyncPushService.php](../backend/app/Services/Sync/SyncPushService.php) | `tests/Feature/Sync/SyncPushServiceTest.php` — "selling offline then reconnecting..." |
+| Resubmit same operation UUID → earlier result, nothing new (section 13.2, G6-style) | `SyncPushService::processOne()`'s `sync_operations.uuid` dedupe check | `SyncPushServiceTest` — "resubmitting the same operation UUID..." + `frontend/src/offline/syncClient.test.js` |
+| Two devices sell the last unit offline → both accepted, STOCK_SHORTFALL flagged, none lost (section 13.2) | `SyncPushService::processSaleCreate()` retries with `forceAllowNegativeStock` on `INSUFFICIENT_STOCK` | `SyncPushServiceTest` — "two devices selling the last unit offline..." |
+| Server price changes while offline → mismatch policy applied, difference recorded, server total always wins (section 13.2, G1) | `SyncPushService::processSaleCreate()`'s `PRICE_MISMATCH` conflict (D-0037: never overrides the committed total) | `SyncPushServiceTest` — "a server price change while offline is reconciled..." |
+| Revoked device: pre-revocation ops accepted, later rejected for review; wiped at next contact (section 13.2) | `SyncPushService::processOne()`'s `client_created_at` vs `revoked_at` check (D-0035); `frontend/src/offline/snapshot.js` `wipeLocalData()` | `SyncPushServiceTest` — "a revoked device: operations created BEFORE/AFTER revocation..."; `frontend/src/offline/snapshot.test.js` — "wiping local data clears every store..." |
+| Expired/suspended tenant → offline sales stored, never discarded (section 13.2) | `SyncPushService::hold()`; route restructuring exempting `/sync/push` from the `tenant.active` gate (D-0034, a real bug found via a failing test) | `SyncPushServiceTest` — "an expired/suspended tenant..." |
+| Device series never repeat, provisional numbers replaced correctly (section 13.2) | `SaleService::create()`'s new `$deviceId` param feeding `NumberingService::next()`'s existing `device_key` bucket column (Phase 1/D-0020, exercised for real for the first time) | `SyncPushServiceTest` — "device-scoped offline numbering..." |
+| Clock skew, 500-operation queue, interrupted sync with backoff (section 13.2) | `SyncPushService`'s `CLOCK_SKEW` conflict; `frontend/src/offline/outbox.js` `computeBackoffDelayMs()` + `syncClient.js`'s retry scheduling | `SyncPushServiceTest` — clock-skew test + 20-operation batch test; `syncClient.test.js` — "a network failure... schedules a retry with backoff" |
+| Rejected items stay visible until resolved (section 13.2) | `GET /sync/operations`; `SyncConflictService::resolve()` | `SyncPushServiceTest` — "rejected and held operations stay visible..." |
+| Snapshot + incremental pull (section 9, build-list scope, D-0036) | [app/Services/Sync/SyncPullService.php](../backend/app/Services/Sync/SyncPullService.php) | `tests/Feature/Sync/SyncPullServiceTest.php` — full pull, incremental-by-product, incremental-by-price-change |
+| Encrypt sensitive fields with a device key (section 9) | [frontend/src/offline/crypto.js](../frontend/src/offline/crypto.js) - Web Crypto AES-GCM | `frontend/src/offline/crypto.test.js` — round-trip, fresh IV per call, wrong-key failure |
+| Device management (list/revoke) | [app/Http/Controllers/Api/V1/DeviceController.php](../backend/app/Http/Controllers/Api/V1/DeviceController.php) | `tests/Feature/Devices/DeviceControllerTest.php` |
+| Dynamic-Only Rule check still passes against all new Phase 7 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-7.md` |
+
+Known gaps this phase (tracked, not silently skipped, D-0038–D-0042): no envelope hash/tamper verification; tenant-suspension check doesn't separately model subscription expiry/grace; only `sale.create` has a real sync handler (other `offline.allowed_operations` types are structurally accepted then rejected with `TYPE_NOT_ALLOWED_OFFLINE`); the frontend offline module is built and tested standalone but not yet imported by any screen (no POS cart/billing UI exists at all); no PWA/service-worker registration despite `vite-plugin-pwa` being installed since Phase 0, no auto-lock/PIN screen.
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |

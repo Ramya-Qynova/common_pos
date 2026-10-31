@@ -66,6 +66,7 @@ class PlatformSettingsSeeder extends Seeder
             ['offline.snapshot_refresh_minutes', 30, 'integer', null, null],
             ['offline.snapshot_max_age_hours', 24, 'integer', null, null],
             ['offline.price_mismatch_policy', 'accept_device_price', 'enum', ['accept_device_price', 'accept_server_price'], null],
+            ['offline.clock_skew_warning_minutes', 10, 'integer', null, 'Flag a synced operation whose client_created_at is this far from server receipt time.'],
 
             ['notifications.receipt_channels', ['print'], 'json', null, null],
 

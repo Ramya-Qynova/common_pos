@@ -5,6 +5,7 @@ namespace App\Services\Catalogue;
 use App\Exceptions\ApiException;
 use App\Models\Product;
 use App\Services\Audit\AuditLogger;
+use App\Services\Sync\ChangeLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -34,6 +35,7 @@ class ProductService
             ]);
 
             AuditLogger::log($tenantId, $userId, 'product.created', 'Product', $product->id, null, $product->toArray());
+            ChangeLogger::log($tenantId, 'Product', $product->id, 'created', $product->toArray());
 
             return $product;
         });
@@ -50,6 +52,7 @@ class ProductService
         $product->save();
 
         AuditLogger::log($product->tenant_id, $userId, 'product.archived', 'Product', $product->id, $before, $product->toArray());
+        ChangeLogger::log($product->tenant_id, 'Product', $product->id, 'archived', $product->toArray());
 
         return $product;
     }

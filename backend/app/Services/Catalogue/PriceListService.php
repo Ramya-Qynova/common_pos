@@ -5,6 +5,7 @@ namespace App\Services\Catalogue;
 use App\Models\PriceListItem;
 use App\Models\ProductPrice;
 use App\Services\Audit\AuditLogger;
+use App\Services\Sync\ChangeLogger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -41,13 +42,15 @@ class PriceListService
                 'effective_to' => null,
             ]);
 
-            ProductPrice::withoutTenantScope()->updateOrCreate(
+            $current = ProductPrice::withoutTenantScope()->updateOrCreate(
                 [
                     'tenant_id' => $tenantId, 'product_id' => $productId, 'variant_key' => $variantId ?? 0,
                     'price_list_id' => $priceListId, 'unit_id' => $unitId,
                 ],
                 ['variant_id' => $variantId, 'price' => $price],
             );
+
+            ChangeLogger::log($tenantId, 'ProductPrice', $current->id, 'updated', $current->toArray());
 
             return $item;
         });

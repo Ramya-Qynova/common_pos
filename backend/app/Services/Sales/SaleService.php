@@ -45,7 +45,16 @@ class SaleService
         private ShiftService $shifts,
     ) {}
 
-    public function create(int $tenantId, array $input, int $userId, bool $hasDiscountPermission = false): Sale
+    /**
+     * $deviceId/$forceAllowNegativeStock are only ever passed by
+     * SyncPushService reconciling an offline sale (section 9): device-scoped
+     * invoice numbering (NumberingService's device_key bucket already
+     * supports this, D-0020) and the one explicit, policy-sanctioned
+     * exception to G1's negative-stock rule ("two devices sell the last
+     * unit offline -> both accepted, STOCK_SHORTFALL flagged" - section
+     * 13.2). An online sale never passes either.
+     */
+    public function create(int $tenantId, array $input, int $userId, bool $hasDiscountPermission = false, ?int $deviceId = null, bool $forceAllowNegativeStock = false): Sale
     {
         if ((bool) $this->settings->get('sales.shift_required', $tenantId) && empty($input['cashier_shift_id'])) {
             throw new ApiException('SHIFT_REQUIRED', 'An open shift is required to create a sale.', 409);
@@ -88,7 +97,7 @@ class SaleService
 
         $this->validatePayments($tenantId, $input['payments'], $priced['grand_total'], $input['customer_id'] ?? null);
 
-        return DB::transaction(function () use ($tenantId, $input, $resolvedLines, $priced, $userId) {
+        return DB::transaction(function () use ($tenantId, $input, $resolvedLines, $priced, $userId, $deviceId, $forceAllowNegativeStock) {
             $stockMovements = [];
             foreach ($resolvedLines as $index => $rl) {
                 $stockMovements[] = [
@@ -97,11 +106,15 @@ class SaleService
                     'direction' => 'out', 'quantity' => $rl['quantity'], 'source_type' => 'sale',
                 ];
             }
-            $ledgerEntries = $this->stock->recordMovements($tenantId, $stockMovements, ['user_id' => $userId]);
+            $stockContext = ['user_id' => $userId];
+            if ($forceAllowNegativeStock) {
+                $stockContext['allow_negative'] = true;
+            }
+            $ledgerEntries = $this->stock->recordMovements($tenantId, $stockMovements, $stockContext);
 
             $isTest = $input['is_test'] ?? false;
             $series = $isTest ? 'TEST' : 'default';
-            $invoiceNumber = $this->numbering->next($tenantId, $series);
+            $invoiceNumber = $this->numbering->next($tenantId, $series, null, $deviceId);
 
             $sale = Sale::withoutTenantScope()->create([
                 'tenant_id' => $tenantId, 'uuid' => $input['uuid'] ?? (string) Str::uuid(),
@@ -110,7 +123,9 @@ class SaleService
                 'customer_id' => $input['customer_id'] ?? null, 'status' => 'completed', 'payment_status' => 'paid',
                 'line_subtotal' => $priced['line_subtotal'], 'discount_total' => $priced['discount_total'],
                 'taxable_amount' => $priced['taxable_amount'], 'tax_total' => $priced['tax_total'],
-                'grand_total' => $priced['grand_total'], 'is_test' => $isTest, 'origin' => 'online',
+                'grand_total' => $priced['grand_total'], 'is_test' => $isTest,
+                'origin' => $deviceId ? 'offline' : 'online', 'device_id' => $deviceId,
+                'client_created_at' => $input['client_created_at'] ?? null,
                 'server_created_at' => now(), 'created_by' => $userId,
             ]);
 
