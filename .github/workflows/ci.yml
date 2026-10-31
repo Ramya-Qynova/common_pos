@@ -59,6 +59,10 @@ jobs:
           DB_DATABASE: common_pos_test
           DB_USERNAME: root
           DB_PASSWORD: root
+          # Read directly by tests/Feature/Inventory/StockConcurrencyTest.php,
+          # which opens its own raw PDO connections (phpunit.xml forces the
+          # Laravel app itself onto sqlite :memory: for every other test).
+          STOCK_LOCK_TEST_DB: common_pos_test
 
   frontend:
     name: Frontend (React)

@@ -59,3 +59,16 @@ All in `backend/database/migrations/2025_01_01_*`, in this file order:
 - `approval_requests`, `approvals` — identity/security — schema only this phase, no rule triggers an approval yet (`2025_01_01_000015_create_approval_tables.php`)
 
 Also: the Phase 0 default `users` migration was removed and replaced by the tenant-aware `users` table above (see `docs/DECISIONS.md` D-0012); `sessions`/`password_reset_tokens` (framework-only, not business data) kept at their original timestamp slot.
+
+### Phase 2
+
+All in `backend/database/migrations/2025_02_01_*`, in this file order:
+
+- `categories`, `brands`, `units` — catalogue — tenant's lookup catalogues (`2025_02_01_000001_create_catalogue_lookup_tables.php`)
+- `products`, `product_units`, `product_variants`, `barcodes`, `product_recipes` — catalogue — the product master and its unit/variant/barcode/kit structure (`2025_02_01_000002_create_product_tables.php`)
+- `price_lists`, `price_list_items`, `product_prices` — catalogue — `price_list_items` is the append-style price history, `product_prices` the current-price lookup cache kept in sync by `PriceListService` (`2025_02_01_000003_create_price_list_tables.php`)
+- `batches`, `serial_numbers`, `stock_balances`, `stock_ledger`, `cost_layers` — inventory — the balance/ledger pair `StockService` maintains, plus batch/serial tracking and the FIFO-ready (schema-only) `cost_layers` table (`2025_02_01_000004_create_stock_tables.php`)
+- `stock_adjustments`, `stock_adjustment_items` — inventory — opening stock/adjustment/damage/wastage records (`2025_02_01_000005_create_stock_adjustment_tables.php`)
+- `import_jobs`, `export_jobs` — operations — `ProductImportService`'s per-row accept/reject report; export is schema-only this phase (`2025_02_01_000006_create_import_export_job_tables.php`)
+
+**`stock_balances`/`product_prices` `variant_key`/`batch_key` columns**: see `docs/DECISIONS.md` D-0013 — these, not the nullable `variant_id`/`batch_id`, carry the actual uniqueness constraint, because NULL can't be uniquely constrained across MySQL/MariaDB/SQLite.

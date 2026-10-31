@@ -7,3 +7,4 @@ Per the Autonomy Charter, this is **not** a stopping point — it is a list of l
 - D-0008: Tamil and Hindi platform translations are machine-drafted, flagged `needs_review` — have a native speaker check them before go-live.
 - D-0009: The platform guard still uses `Auth::viaRequest` (unlike the tenant guard, fixed to avoid stale-cache reauthentication after revocation) because no platform login/revocation endpoint exists yet to exercise the same bug — apply the `AuthenticateTenant`-style fix when platform auth endpoints are built.
 - D-0011: Frontend stores auth tokens in plain `localStorage` for now (Phase 1, online-only) instead of the Phase 7 encrypted-IndexedDB device-key mechanism — route through that instead once Phase 7 builds it.
+- D-0015: Phase 2 built catalogue/inventory backend only, no frontend screens (PRD-xx, INV-xx from section 11) — confirm this reading of the phase boundary, or ask for the screens to be added before Phase 3.

@@ -31,6 +31,25 @@ Maps each requirement to the code that implements it and the test that proves it
 
 Known gaps this phase (not silently skipped — tracked in `docs/OPEN_QUESTIONS.md` / `docs/DECISIONS.md`): `GET /tenant/config` does not yet return `translations` (D-0008's seeded dictionary isn't wired to the frontend yet); numbering/tax/payment-method/lookup/custom-field/document-template/hardware-profile/offline-policy/rule-engine/approval tables have schema + models only, no service logic (that lands with the phases that actually use them — numbering and tax in Phase 4, offline policies in Phase 7, etc.); platform guard auth endpoints (login/logout for platform users) were not built this phase, only the guard mechanism itself.
 
+## Phase 2
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Stock balance always equals the sum of its ledger (section 7 "Critical table rules") | [app/Services/Inventory/StockService.php](../backend/app/Services/Inventory/StockService.php) | `tests/Feature/Inventory/StockServiceTest.php` — "receiving stock then selling some leaves a balance that exactly equals the sum of the ledger" |
+| Weighted-average costing (section 1.2, section 8 "Stock operations") | `StockService::applyMovement()` | `StockServiceTest` — "weighted-average cost recalculates correctly across two purchases at different prices"; outgoing cost taken from current average, not original purchase price |
+| Negative stock blocked by default, bypassable via setting (section 1.2) | `StockService::applyMovement()` + `SettingsService` | `StockServiceTest` — "selling more than is in stock is blocked..." / "negative stock is allowed when the inventory.allow_negative_stock setting is turned on" |
+| Stock locking in a consistent order prevents deadlock on multi-item, opposite-order operations (section 7, section 13.1) | `StockService::recordMovements()` (sorts before locking) | `StockServiceTest` — "a batch of movements across two products is applied in a consistent (sorted) lock order regardless of input order" |
+| Two concurrent decrements of the last unit cannot both succeed (section 13.1) | `StockService::lockOrCreateBalance()` (`lockForUpdate()`) | `tests/Feature/Inventory/StockConcurrencyTest.php` — real MySQL row-lock contention proof via two independent PDO connections (see `docs/DECISIONS.md` D-0014) |
+| A failed stock movement leaves nothing written (G4) | `StockService::applyMovement()` throws before any write on insufficient stock | `StockServiceTest` — balance/ledger row counts asserted unchanged after the thrown exception |
+| Low-stock detection | `StockService::lowStockBalances()` | `tests/Feature/Inventory/LowStockTest.php` |
+| Products archived, never deleted (G9) | `app/Services/Catalogue/ProductService.php` | `tests/Feature/Catalogue/ProductServiceTest.php` — "archiving a product soft-archives it rather than deleting it" |
+| Price lists keep history; current-price lookup stays in sync (section 7 "price lists + history") | [app/Services/Catalogue/PriceListService.php](../backend/app/Services/Catalogue/PriceListService.php) | `tests/Feature/Catalogue/PriceListServiceTest.php` |
+| Bulk import validates every row, saves valid rows, reports every rejected row with a reason (section 8 "Master data") | [app/Services/Catalogue/ProductImportService.php](../backend/app/Services/Catalogue/ProductImportService.php) | `tests/Feature/Catalogue/ProductImportServiceTest.php` — 5 rows, 2 accepted, 3 rejected each with its own reason and row number |
+| Opening stock/adjustment/damage/wastage require a mandatory reason and post through the same locked ledger pattern as any other stock movement (section 8 "Stock operations") | [app/Services/Inventory/StockAdjustmentService.php](../backend/app/Services/Inventory/StockAdjustmentService.php) | `tests/Feature/Inventory/StockAdjustmentServiceTest.php` |
+| Dynamic-Only Rule check still passes against all new Phase 2 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-2.md` |
+
+Known gaps this phase (tracked, not silently skipped): no catalogue/inventory frontend screens built (D-0015); `cost_layers`/FIFO is schema-only (weighted average is the only costing method with real logic, per section 1.2's own permission to defer FIFO); export jobs are schema-only (no real export logic); approval-rule integration for adjustments requiring sign-off is not wired up (the rule engine itself has no evaluator yet, carried over from Phase 1) — every adjustment posts immediately, `StockAdjustment.approved_by` stays unset until that lands.
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |
