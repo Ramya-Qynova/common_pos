@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\DailyClosingController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\HardwareProfileController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\PriceListController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
@@ -46,6 +47,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/tenant/config', [TenantConfigController::class, 'show']);
 
             Route::post('/sales', [SaleController::class, 'store'])->middleware(['permission:pos.sales.create', 'idempotent']);
+            Route::get('/sales', [SaleController::class, 'index'])->middleware('permission:pos.sales.create');
+            Route::get('/sales/{sale}', [SaleController::class, 'show'])->middleware('permission:pos.sales.create');
 
             // Gating for cancel is inside SaleCancellationService itself (same
             // APPROVAL_REQUIRED pattern SaleService uses for discounts), so no
@@ -94,7 +97,14 @@ Route::prefix('v1')->group(function () {
             // open/close, none of which had an HTTP route before (ProductService/
             // ShiftService/Customer model all existed service-only since Phases 2-3).
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:pos.sales.create');
+            Route::post('/products', [ProductController::class, 'store'])->middleware('permission:catalog.products.manage');
+
             Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:pos.sales.create');
+            Route::post('/customers', [CustomerController::class, 'store'])->middleware('permission:customers.manage');
+            Route::get('/customers/{id}/ledger', [CustomerController::class, 'ledger'])->middleware('permission:customers.manage');
+
+            Route::get('/inventory/balances', [InventoryController::class, 'balances'])->middleware('permission:pos.sales.create');
+            Route::get('/reports/summary', [ReportController::class, 'summary'])->middleware('permission:reports.view');
 
             Route::get('/shifts/current', [ShiftController::class, 'current'])->middleware('permission:pos.shift.open');
             Route::post('/shifts/open', [ShiftController::class, 'open'])->middleware('permission:pos.shift.open');

@@ -24,7 +24,9 @@
  */
 test('a locked stock_balances row genuinely blocks a second transaction, proving the race StockService relies on cannot occur', function () {
     $dsn = 'mysql:host=127.0.0.1;port=3306;dbname='.(getenv('STOCK_LOCK_TEST_DB') ?: 'common_pos');
-    $pdo1 = new PDO($dsn, 'root', 'root');
+    $user = env('DB_USERNAME') ?: 'root';
+    $pass = env('DB_PASSWORD', config('database.connections.mysql.password', 'root'));
+    $pdo1 = new PDO($dsn, $user, $pass);
     $pdo1->exec('SET FOREIGN_KEY_CHECKS=0');
     $pdo1->exec("INSERT INTO stock_balances (tenant_id, warehouse_id, product_id, variant_key, batch_key, quantity, average_cost, created_at, updated_at) VALUES (999999, 999999, 999999, 0, 0, '1.0000', '10.0000', NOW(), NOW())");
     $balanceId = (int) $pdo1->lastInsertId();
@@ -34,7 +36,7 @@ test('a locked stock_balances row genuinely blocks a second transaction, proving
         $pdo1->beginTransaction();
         $pdo1->query("SELECT * FROM stock_balances WHERE id = {$balanceId} FOR UPDATE")->fetch();
 
-        $pdo2 = new PDO($dsn, 'root', 'root');
+        $pdo2 = new PDO($dsn, $user, $pass);
         $pdo2->exec('SET SESSION innodb_lock_wait_timeout = 1');
         $pdo2->beginTransaction();
 
@@ -51,7 +53,7 @@ test('a locked stock_balances row genuinely blocks a second transaction, proving
         $pdo1->commit();
 
         // Now that A released the lock, a fresh attempt succeeds immediately.
-        $pdo3 = new PDO($dsn, 'root', 'root');
+        $pdo3 = new PDO($dsn, $user, $pass);
         $pdo3->beginTransaction();
         $row = $pdo3->query("SELECT * FROM stock_balances WHERE id = {$balanceId} FOR UPDATE")->fetch();
         expect($row)->not->toBeFalse();

@@ -3,7 +3,41 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 8 — Security, performance, backup/restore, Docker/hosting, runbook: **complete**, tagged `phase-8-complete`. All 8 build phases from section 12 are now done. See `docs/reports/phase-8.md` for full detail and real executed test/measurement output, and `docs/reports/FINAL.md` for the section 15 Final Acceptance summary.
+Phase 10 — Management Screens & Operational Dashboard (Catalogue, Inventory, Customers, Sales History, Reports): **complete** (tagged `phase-10-complete`).
+Phases 0 through 10 are **complete** (tagged `phase-0-complete` through `phase-10-complete`). See `docs/reports/phase-10.md` for Phase 10 details.
+
+## Done (Phase 10, on top of Phases 0-9)
+- Operational Management Screens:
+  - `frontend/src/screens/SalesScreen.jsx`: Paginated sales list, date/invoice search, status filtering, and thermal receipt preview.
+  - `frontend/src/screens/ReceiptModal.jsx`: Thermal receipt view with print action and line items breakdown.
+  - `frontend/src/screens/ProductsScreen.jsx`: Product catalogue view with stock-on-hand, SKU search, and new product modal.
+  - `frontend/src/screens/InventoryScreen.jsx`: Real-time stock balances, low-stock threshold alert (≤ 5 units), and stock adjustment modal.
+  - `frontend/src/screens/CustomersScreen.jsx`: Customer profiles with credit limits, current balance tracking, and customer transaction ledger modal.
+  - `frontend/src/screens/ReportsScreen.jsx`: Operational financial dashboard showing 7 core business metrics with date filters (today, 7 days, 30 days, all time).
+- SPA Navigation & Routing:
+  - Dynamic schema-driven menu via `AppShell.jsx` (G11/G12) resolving `config.menu` from `GET /tenant/config`.
+  - Client-side routing in `App.jsx` for `/pos`, `/sales`, `/products`, `/catalog`, `/inventory`, `/customers`, and `/reports`.
+- Backend Endpoints & Test Suite:
+  - `GET /sales` & `GET /sales/{id}` (`SaleController`).
+  - `POST /products` (`ProductController`).
+  - `POST /customers` & `GET /customers/{id}/ledger` (`CustomerController`).
+  - `GET /inventory/balances` (`InventoryController`).
+  - `GET /reports/summary` (`ReportController`).
+  - `ManagementEndpointsTest.php` covering all new endpoints.
+- Quality Gates & Invariants:
+  - 134 backend Pest tests (556 assertions) passing.
+  - 41 frontend Vitest tests (11 test files) passing.
+  - Zero dynamic-only rule violations (`node scripts/check-dynamic-only.js`).
+  - Pint, ESLint, and Vite production build clean. Tagged `phase-10-complete`.
+
+## Done (Phase 9, on top of Phases 0-8)
+- POS billing screen (`frontend/src/screens/PosScreen.jsx`, POS-01): branch/register/price-list dynamic selectors from `GET /tenant/config`, shift open/close with real cash tracking, debounced product search, cart operations, optional customer attach, and checkout.
+- Offline outbox checkout pipeline: checkout routes through `useOffline().enqueueSale -> outbox.enqueue + SyncClient.flush` unifying online and offline checkout paths (D-0053).
+- SPA Routing & AppShell: React Router DOM integration with `<Outlet context={config}>`, global `ConnectionBadge` (online/offline/syncing status + manual sync button).
+- Device identity (`frontend/src/offline/device.js`): persistent device UUID generated and supplied at login.
+- Backend additions: `ProductController` (`GET /products`), `CustomerController` (`GET /customers`), `ShiftController` (`GET /shifts/current`, `POST /shifts/open`, `POST /shifts/{shift}/close`), extended `TenantConfigController`.
+- Bug fix (D-0051): Shift-close confirmation render branch corrected.
+- 128 backend tests / 36 frontend tests passing. Pint, Larastan, and Dynamic-Only rule check clean. Tagged `phase-9-complete`.
 
 ## Done (Phase 8, on top of Phases 0-7)
 - Security (section 13.1): 7 new tests proving token rotation/replay (refreshing revokes the old access token for real), rate limiting (429 after the throttle limit), SQL-injection-shaped input rejected like any bad credential, XSS-shaped input round-trips as inert data, secrets never appear in `GET /auth/me`, and IDOR (another tenant's sale ID resolves to 404, never a 403 that would leak existence). Lockout and tenant isolation already had dedicated coverage since Phase 1.

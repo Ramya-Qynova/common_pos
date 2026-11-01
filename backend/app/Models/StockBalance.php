@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Derived/cached from stock_ledger (G5) - a scheduled integrity job
@@ -22,4 +23,14 @@ class StockBalance extends Model
         'tenant_id', 'warehouse_id', 'product_id', 'variant_id', 'batch_id',
         'variant_key', 'batch_key', 'quantity', 'average_cost', 'reorder_point',
     ];
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 }

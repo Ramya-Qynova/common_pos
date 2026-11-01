@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AppShell from './AppShell';
 import { AuthProvider } from '../auth/AuthContext';
+import { t } from '../i18n';
 
 beforeEach(() => {
   window.localStorage.setItem(
@@ -47,7 +48,7 @@ describe('AppShell', () => {
     renderAppShell();
 
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'menu.pos' })).toHaveAttribute('href', '/pos'),
+      expect(screen.getByRole('link', { name: t('menu.pos') })).toHaveAttribute('href', '/pos'),
     );
   });
 

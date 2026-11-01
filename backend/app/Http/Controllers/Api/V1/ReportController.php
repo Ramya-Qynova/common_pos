@@ -46,4 +46,30 @@ class ReportController extends Controller
 
         return ApiResponse::success(['report' => $data['report'], 'value' => $value]);
     }
+
+    public function summary(Request $request)
+    {
+        $data = Validator::make($request->all(), [
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'branch_id' => 'nullable|integer',
+        ])->validate();
+
+        $tenantId = app(TenantContext::class)->tenantId();
+        $branchId = $data['branch_id'] ?? null;
+        $from = $data['from'] ?? now()->startOfDay()->toDateTimeString();
+        $to = $data['to'] ?? now()->endOfDay()->toDateTimeString();
+
+        return ApiResponse::success([
+            'from' => $from,
+            'to' => $to,
+            'gross_sales' => $this->reports->grossSales($tenantId, $from, $to, $branchId),
+            'net_sales' => $this->reports->netSales($tenantId, $from, $to, $branchId),
+            'tax_collected' => $this->reports->taxCollected($tenantId, $from, $to, $branchId),
+            'cogs' => $this->reports->cogs($tenantId, $from, $to, $branchId),
+            'gross_profit' => $this->reports->grossProfit($tenantId, $from, $to, $branchId),
+            'stock_valuation' => $this->reports->stockValuation($tenantId, $branchId),
+            'outstanding' => $this->reports->outstanding($tenantId),
+        ]);
+    }
 }
