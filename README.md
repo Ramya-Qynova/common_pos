@@ -2,7 +2,7 @@
 
 Multi-tenant, multi-branch, online + offline point-of-sale for any type of shop. Built from [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) — read that file for the full specification; this README is just the setup and orientation.
 
-**Status:** Phase 0 (Foundation) in progress. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for exactly what is done vs. pending, and [`docs/reports/`](docs/reports/) for the per-phase reports with real executed test output.
+**Status:** Phase 8 (security/performance/backup/hosting) complete - all 8 build phases done. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for exactly what is done vs. pending, [`docs/reports/`](docs/reports/) for the per-phase reports with real executed test output, and [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for operations (backup/restore, deployment, incident response).
 
 ## Stack
 
@@ -35,6 +35,10 @@ cd backend; php artisan serve   # http://localhost:8000
 ```powershell
 cd frontend; npm run dev        # http://localhost:5173
 ```
+
+Optional: `cd backend; php artisan demo:seed` creates a demo tenant (shop_code `DEMO`, owner/`demo-password-123`) through the real onboarding flow, with one priced, stocked product and one completed sale - useful for trying the API without building fixtures by hand.
+
+Docker (alternative to the above, once Docker Desktop's daemon is running): `docker compose up --build` from the repo root starts the full stack (app, nginx, mysql, redis, frontend) per `docker-compose.yml`. See `docs/RUNBOOK.md` for the full deployment procedure and known Windows/XAMPP caveats.
 
 ## Repository layout
 

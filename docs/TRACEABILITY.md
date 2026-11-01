@@ -135,6 +135,22 @@ Known gaps this phase (tracked, not silently skipped, D-0029–D-0033): `Onboard
 
 Known gaps this phase (tracked, not silently skipped, D-0038–D-0042): no envelope hash/tamper verification; tenant-suspension check doesn't separately model subscription expiry/grace; only `sale.create` has a real sync handler (other `offline.allowed_operations` types are structurally accepted then rejected with `TYPE_NOT_ALLOWED_OFFLINE`); the frontend offline module is built and tested standalone but not yet imported by any screen (no POS cart/billing UI exists at all); no PWA/service-worker registration despite `vite-plugin-pwa` being installed since Phase 0, no auto-lock/PIN screen.
 
+## Phase 8
+
+| Requirement | Code | Test / evidence |
+|---|---|---|
+| Security: SQL injection, XSS, IDOR, token rotation/replay, rate limiting, secrets never in responses (section 13.1) | [tests/Feature/Security/SecurityTest.php](../backend/tests/Feature/Security/SecurityTest.php) (lockout already covered Phase 1, `tests/Feature/Auth/LoginTest.php`) | All 7 tests executed and passing - see `docs/reports/phase-8.md` |
+| Performance vs section 11 targets, measured for real | [tests/Feature/Performance/PerformanceTest.php](../backend/tests/Feature/Performance/PerformanceTest.php) | `POST /sales` p95 and snapshot-pull targets met with real numbers; sync-push throughput measured and the shortfall documented (D-0044) - not guessed at either way |
+| A real N+1 query bug found and fixed via the performance test (section 11) | `SyncPullService::serializeProducts()` | D-0043 - 2.48s → 0.29s for a 2,001-product snapshot, re-measured after the fix |
+| Backup/restore verified, with integrity checks (section 12 Phase 8 exit gate, section 15) | [scripts/backup-db.ps1](../scripts/backup-db.ps1), [scripts/restore-db.ps1](../scripts/restore-db.ps1), [scripts/verify-backup-restore.ps1](../scripts/verify-backup-restore.ps1) | Executed for real against the live `common_pos` database (with a real demo tenant's data, `php artisan demo:seed`) - all 121 tables' row counts matched, the G5 stock-ledger invariant held on the restored copy; full output in `docs/reports/phase-8.md` |
+| Monitoring + alerting (section 12 Phase 8 build list) | [app/Http/Controllers/Api/V1/HealthController.php](../backend/app/Http/Controllers/Api/V1/HealthController.php) (`GET /health`) | `tests/Feature/Health/HealthControllerTest.php`; D-0048 documents the scope boundary (no external APM/alerting vendor integrated) |
+| Docker/hosting (section 12 Phase 8 build list) | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `docker/nginx/default.conf` | Syntax-validated (`docker compose config --quiet` exits 0); D-0046 documents that `docker compose up` could not be run end-to-end in this sandboxed environment (daemon unavailable) |
+| Runbook (section 12 Phase 8 build list, section 15) | [docs/RUNBOOK.md](../docs/RUNBOOK.md) | Filled in for real (was a Phase 0 placeholder) - setup, deployment, backup/restore, monitoring, common operational tasks, incident checklist |
+| A seeded demo tenant created through the real onboarding flow (section 15) | [app/Console/Commands/SeedDemoTenant.php](../backend/app/Console/Commands/SeedDemoTenant.php) (`php artisan demo:seed`) | Executed for real against the live database; used as the dataset for the backup/restore verification above |
+| Dynamic-Only Rule check still passes against all new Phase 8 code | [scripts/check-dynamic-only.js](../scripts/check-dynamic-only.js) | Executed — see `docs/reports/phase-8.md` |
+
+Known gaps this phase (tracked, not silently skipped, D-0044–D-0049): sync push throughput measured below the 100 ops/s target (root cause and remediation path documented, D-0044); local-search/add-to-cart targets not measurable without a POS UI (D-0045); Docker Compose stack not run end-to-end (daemon unavailable in this environment, D-0046); no external APM/alerting vendor (D-0048); security coverage is targeted confirmation testing, not a full penetration test or SAST/DAST scan (D-0049). A real `.env` corruption caused by a failed `php artisan sail:install` was found and fixed along the way (D-0047).
+
 ## Screen-ID mapping (section 11)
 
 | Screen ID (guide) | Built as | Notes |

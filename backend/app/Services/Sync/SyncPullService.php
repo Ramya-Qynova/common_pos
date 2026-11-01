@@ -71,14 +71,27 @@ class SyncPullService
     }
 
     /**
+     * section 11 performance target "initial snapshot < 60s typical
+     * branch": one query for every product's prices, grouped in PHP -
+     * not one query PER product (D-0043 found and fixed this real N+1
+     * via the Phase 8 performance test: 2.48s for 2,001 products
+     * one-query-per-product scales linearly to well past 60s at a
+     * realistic 50,000-product catalogue).
+     *
      * @param  Collection<int,Product>  $products
      */
     private function serializeProducts(int $tenantId, ?int $priceListId, Collection $products): array
     {
-        return $products->map(function (Product $product) use ($tenantId, $priceListId) {
-            $prices = $priceListId
-                ? ProductPrice::withoutTenantScope()->where('tenant_id', $tenantId)->where('product_id', $product->id)->where('price_list_id', $priceListId)->get(['unit_id', 'variant_key', 'price'])
-                : collect();
+        $pricesByProduct = $priceListId
+            ? ProductPrice::withoutTenantScope()
+                ->where('tenant_id', $tenantId)->where('price_list_id', $priceListId)
+                ->whereIn('product_id', $products->pluck('id'))
+                ->get(['product_id', 'unit_id', 'variant_key', 'price'])
+                ->groupBy('product_id')
+            : collect();
+
+        return $products->map(function (Product $product) use ($pricesByProduct) {
+            $prices = $pricesByProduct->get($product->id, collect());
 
             return [
                 'id' => $product->id, 'uuid' => $product->uuid, 'sku' => $product->sku, 'name' => $product->name,

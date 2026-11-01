@@ -3,7 +3,16 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 7 — Offline engine: **complete**, tagged `phase-7-complete`. See `docs/reports/phase-7.md` for full detail and real executed test output. Phase 8 (security/performance/backup/hosting) starts next.
+Phase 8 — Security, performance, backup/restore, Docker/hosting, runbook: **complete**, tagged `phase-8-complete`. All 8 build phases from section 12 are now done. See `docs/reports/phase-8.md` for full detail and real executed test/measurement output, and `docs/reports/FINAL.md` for the section 15 Final Acceptance summary.
+
+## Done (Phase 8, on top of Phases 0-7)
+- Security (section 13.1): 7 new tests proving token rotation/replay (refreshing revokes the old access token for real), rate limiting (429 after the throttle limit), SQL-injection-shaped input rejected like any bad credential, XSS-shaped input round-trips as inert data, secrets never appear in `GET /auth/me`, and IDOR (another tenant's sale ID resolves to 404, never a 403 that would leak existence). Lockout and tenant isolation already had dedicated coverage since Phase 1.
+- Performance (section 11), measured for real, not assumed: `POST /sales` p95 ~67-117ms (target < 800ms, met with margin); full snapshot pull for 2,001 products 0.29s (target < 60s, met with margin - see the fix below); sync push throughput measured at 6-14 ops/s against a target of 100 ops/s per worker - genuinely below target, root cause and remediation documented rather than hidden (D-0044). Local-search/add-to-cart targets documented as not measurable without a POS UI (D-0045).
+- A real N+1 query bug found BY the performance test and fixed (D-0043): `SyncPullService` was querying prices once per product; fixed to one query for the whole batch, grounded by hand - 2.48s -> 0.29s for the same 2,001 products.
+- Backup/restore, executed for real (not just scripted) against the live database (seeded via the new `php artisan demo:seed` through the real onboarding flow): `scripts/{backup-db,restore-db,verify-backup-restore}.ps1` - backed up, restored into a disposable database, compared all 121 tables' row counts, re-derived the G5 stock-ledger invariant on the restored copy, all passed.
+- A real environment bug found and fixed along the way, not application code but worth recording (D-0047): `php artisan sail:install` silently corrupted `backend/.env` (pointing `DB_HOST` at `mysql`, among other things) before failing to write its own files on this Windows machine - caught because the test suite started hanging on DNS resolution failures, fixed by restoring `.env` from `.env.example`.
+- `GET /api/v1/health` (monitoring), `docker-compose.yml` + `backend/Dockerfile` + `frontend/Dockerfile` + nginx configs (hosting - syntax-validated, honestly could not be run end-to-end in this sandboxed environment, D-0046), `docs/RUNBOOK.md` filled in for real (was a Phase 0 placeholder).
+- 11 new backend tests (122 total), all passing for real; Pint/Larastan/Dynamic-Only clean; frontend suite unaffected (backend-only phase).
 
 ## Done (Phase 7, on top of Phases 0-6)
 - `SyncPushService`: every one of section 13.2's ten offline-gate scenarios proved by a real test against `POST /sync/push` - idempotent replay by `operation_uuid`, two devices selling the last unit (`STOCK_SHORTFALL`, both accepted), a stale device price reconciled against the server total (`PRICE_MISMATCH`, server total always wins - G1, D-0037), a revoked device's pre-/post-revocation operations split by `client_created_at` vs `revoked_at` (D-0035), a suspended tenant's sales held not discarded, device-scoped offline numbering (finally exercising Phase 1/D-0020's `numbering_sequences.device_key`), clock-skew flagging, a 20-operation batch, and rejected/held operations staying visible via the new `GET /sync/operations`.
@@ -42,12 +51,12 @@ Phase 7 — Offline engine: **complete**, tagged `phase-7-complete`. See `docs/r
 - `HeldSaleService`: hold/resume, storing only product/variant/unit/quantity (never a price) so resuming re-prices through the exact same `SaleService::create()` path.
 - 19 new backend tests (64 total) + the JS pricing engine test (14 frontend tests total), all passing for real; Pint/Larastan clean; Dynamic-Only Rule check still passes.
 
-## Next 5 steps (start of Phase 8)
-1. Security tests (section 13.1): SQL injection, XSS, IDOR, token rotation/replay, rate limiting, lockout, secrets never in responses - most of the mechanisms exist (parameterized queries throughout, `AuthenticateTenant`'s per-request revalidation, `auth.max_failed_logins`) but have never been tested adversarially as a dedicated pass.
-2. Performance tests vs section 11's targets (local search < 100ms, add-to-cart < 50ms, `POST /sales` p95 < 800ms, sync push ≥ 100 ops/s, initial snapshot < 60s) - measure against realistic volumes, document actual numbers and gaps per the exit gate's own "or exceptions documented."
-3. Backup/restore verification - a real backup restored into a clean environment with integrity checks passing (Final Acceptance's own explicit requirement).
-4. Docker/hosting + `docs/RUNBOOK.md`.
-5. Carry-overs if time allows: exchange service (D-0025), export-center execution (D-0025), a minimal `discount_rules`/`approval_rules` evaluator (D-0021), wiring the Phase 7 offline module into an actual POS screen (D-0040) and the `crypto.js` device key into token storage (replacing D-0011's plain `localStorage`).
+## Next steps (post-Phase-8: Final Acceptance, then Release 2 per section 2 if capacity remains)
+1. Write `docs/reports/FINAL.md` (section 15 Final Acceptance) - run through every bullet in section 15 with evidence, list what's complete/partial, and surface every DECISIONS.md entry a human should review.
+2. Build actual POS/catalogue/inventory/customer/etc. frontend screens (D-0015/D-0019/D-0022/D-0025/D-0032/D-0040/D-0041) - the single biggest remaining gap: every phase since Phase 2 has been backend-only by deliberate scope, and the API surface is now extensive enough that a real UI pass is the natural next body of work.
+3. Wire the Phase 7 offline module into those screens once they exist (outbox-first writes per section 9), and move auth tokens from plain `localStorage` onto the `crypto.js` device key (D-0011).
+4. Carry-overs: exchange service (D-0025), export-center execution (D-0025), a minimal `discount_rules`/`approval_rules` evaluator (D-0021), queue-dispatched sync push workers if throughput becomes a real constraint (D-0044).
+5. A real Docker daemon run of `docker compose up --build` to close D-0046's one remaining gap (syntax-validated only, not run end-to-end in this sandboxed build environment).
 
 ## How to run tests
 - Backend: `cd backend && php artisan test`; style: `php vendor/bin/pint --test`; static analysis: `php vendor/bin/phpstan analyse --no-progress`
@@ -74,6 +83,10 @@ Phase 7 — Offline engine: **complete**, tagged `phase-7-complete`. See `docs/r
 - No envelope hash/tamper verification on sync operations (D-0038); tenant-suspension check doesn't separately model subscription expiry/grace (D-0039); only `sale.create` has a real sync push handler, every other `offline.allowed_operations` type is rejected with `TYPE_NOT_ALLOWED_OFFLINE` (D-0042).
 - The frontend offline module (outbox/syncClient/snapshot/crypto) is built and genuinely tested but not imported by any screen yet - no POS billing UI exists at all (D-0040); no PWA/service-worker registration despite `vite-plugin-pwa` being installed since Phase 0, no auto-lock/PIN screen (D-0041).
 - Device revocation does not revoke a device's existing tokens or block it from every other endpoint immediately - only `/sync/push` discriminates pre-/post-revocation per operation (D-0035); a broader immediate-lockout gate is a reasonable defense-in-depth addition, not yet built.
+- Sync push throughput measured at 6-14 ops/s against a 100 ops/s target - root cause is synchronous per-request processing, remediation is queue-dispatched workers (D-0044). Local-search/add-to-cart performance targets not measurable without a POS UI (D-0045).
+- `docker compose up --build` was never run end-to-end - Docker Desktop's daemon could not start in this build environment; the compose file and Dockerfiles are syntax-validated only (D-0046).
+- No external APM/log-aggregation/alerting vendor integrated - `GET /health` + existing `audit_logs`/`security_events` + `storage/logs/laravel.log` are the real signals this build produces (D-0048).
+- Security test coverage (section 13.1) is targeted confirmation testing of mechanisms already built, not a full penetration test or SAST/DAST scan (D-0049).
 
 ## Notes for the next session
 This is a multi-week-scale build (8 phases, ~90 tables, full offline sync engine). Work proceeds phase by phase with real commits/tags per phase; do not assume later phases are done just because this file exists — check the "Current phase" line above and the latest `docs/reports/phase-N.md`.

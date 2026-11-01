@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\BarcodeController;
 use App\Http\Controllers\Api\V1\DailyClosingController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\HardwareProfileController;
+use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\PriceListController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
@@ -21,6 +22,11 @@ use App\Http\Controllers\Api\V1\TenantConfigController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    // Public - no tenant/auth context exists yet when a load balancer or
+    // uptime monitor probes this (section 10 "Platform" endpoint group,
+    // section 12 Phase 8 "monitoring + alerting").
+    Route::get('/health', [HealthController::class, 'show']);
+
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
     Route::post('/auth/refresh', [AuthController::class, 'refresh'])->middleware('throttle:20,1');
 
