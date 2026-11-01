@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BarcodeController;
+use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DailyClosingController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\HardwareProfileController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\PriceListController;
+use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\PurchaseReturnController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SaleCancellationController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\SaleReturnController;
+use App\Http\Controllers\Api\V1\ShiftController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\SyncConflictController;
 use App\Http\Controllers\Api\V1\SyncController;
@@ -86,6 +89,16 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/devices', [DeviceController::class, 'index'])->middleware('permission:core.users.manage');
             Route::post('/devices/{device}/revoke', [DeviceController::class, 'revoke'])->middleware('permission:core.users.manage');
+
+            // POS screen support - read-only product/customer search and shift
+            // open/close, none of which had an HTTP route before (ProductService/
+            // ShiftService/Customer model all existed service-only since Phases 2-3).
+            Route::get('/products', [ProductController::class, 'index'])->middleware('permission:pos.sales.create');
+            Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:pos.sales.create');
+
+            Route::get('/shifts/current', [ShiftController::class, 'current'])->middleware('permission:pos.shift.open');
+            Route::post('/shifts/open', [ShiftController::class, 'open'])->middleware('permission:pos.shift.open');
+            Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->middleware('permission:pos.shift.close');
         });
     });
 });

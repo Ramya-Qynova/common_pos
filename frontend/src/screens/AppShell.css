@@ -18,3 +18,33 @@
   padding: 1rem;
   margin: 0;
 }
+
+.app-shell-content {
+  padding: 0 1rem 1rem;
+}
+
+.connection-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #eee;
+}
+
+.connection-badge--syncing {
+  background: #fff3cd;
+}
+
+.connection-badge--error {
+  background: #f8d7da;
+}
+
+.connection-badge-count {
+  font-weight: bold;
+  background: #555;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 0.4rem;
+}

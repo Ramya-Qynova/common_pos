@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { apiRequest, setAccessToken } from '../api/client';
+import { getOrCreateDeviceId } from '../offline/device';
 
 const AuthContext = createContext(null);
 
@@ -36,9 +37,16 @@ export function AuthProvider({ children }) {
   });
 
   const login = useCallback(async (shopCode, username, password) => {
+    const deviceId = getOrCreateDeviceId();
     const data = await apiRequest('/auth/login', {
       method: 'POST',
-      body: { shop_code: shopCode, username, password },
+      body: {
+        shop_code: shopCode,
+        username,
+        password,
+        device_uuid: deviceId,
+        device_name: navigator.userAgent,
+      },
     });
 
     setAccessToken(data.access_token);
@@ -47,6 +55,7 @@ export function AuthProvider({ children }) {
       refreshToken: data.refresh_token,
       user: data.user,
       tenant: data.tenant,
+      deviceId,
     };
     setSession(nextSession);
     persistSession(nextSession);

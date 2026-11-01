@@ -4,7 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\ModuleDefinition;
+use App\Models\PaymentMethod;
+use App\Models\PriceList;
+use App\Models\Register;
 use App\Models\TenantModule;
+use App\Models\Unit;
+use App\Models\Warehouse;
 use App\Services\Settings\SettingsService;
 use App\Support\ApiResponse;
 use App\Support\TenantContext;
@@ -35,6 +40,16 @@ class TenantConfigController extends Controller
             ->values();
 
         $branches = $user->branchAccess()->with('branch')->get()->pluck('branch');
+        $branchIds = $branches->pluck('id');
+
+        // section 10 "Configuration" endpoint group names registers/branches/warehouses
+        // and "payment methods" as part of what a client needs to bill at all - a POS
+        // screen cannot pick a warehouse/register/price-list/payment-method from thin air.
+        $warehouses = Warehouse::withoutTenantScope()->where('tenant_id', $tenantId)->whereIn('branch_id', $branchIds)->where('is_active', true)->get(['id', 'branch_id', 'code', 'name', 'is_default_sales']);
+        $registers = Register::withoutTenantScope()->where('tenant_id', $tenantId)->whereIn('branch_id', $branchIds)->where('is_active', true)->get(['id', 'branch_id', 'warehouse_id', 'code', 'name']);
+        $priceLists = PriceList::withoutTenantScope()->where('tenant_id', $tenantId)->where('is_active', true)->get(['id', 'code', 'name', 'is_default']);
+        $paymentMethods = PaymentMethod::withoutTenantScope()->where('tenant_id', $tenantId)->where('is_active', true)->get(['id', 'code', 'name', 'confirmation_mode', 'allows_overpayment']);
+        $units = Unit::withoutTenantScope()->where('tenant_id', $tenantId)->get(['id', 'code', 'name']);
 
         $settingKeys = [
             'locale.currency_code', 'locale.currency_decimals', 'locale.rounding_mode',
@@ -54,6 +69,11 @@ class TenantConfigController extends Controller
             'modules' => $enabledCodes->values(),
             'menu' => $menu,
             'branches' => $branches,
+            'warehouses' => $warehouses,
+            'registers' => $registers,
+            'price_lists' => $priceLists,
+            'payment_methods' => $paymentMethods,
+            'units' => $units,
             'permissions' => $user->permissionCodes(),
             'settings' => $settings,
         ]);

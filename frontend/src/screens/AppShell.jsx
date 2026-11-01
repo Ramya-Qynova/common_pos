@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiRequest } from '../api/client';
+import { OfflineProvider, useOffline } from '../offline/OfflineContext';
 import { t } from '../i18n';
 import './AppShell.css';
 
@@ -51,23 +53,59 @@ export default function AppShell() {
   }
 
   return (
-    <div className="app-shell">
-      <header className="app-shell-header">
-        <span>{session?.tenant?.name}</span>
-        <button type="button" onClick={logout}>
-          {t('app.logout')}
-        </button>
-      </header>
-      <nav className="app-shell-menu" aria-label="Main menu">
-        {config.menu.length === 0 && <p>{t('app.menu.empty')}</p>}
-        <ul>
-          {config.menu.map((item) => (
-            <li key={item.code}>
-              <a href={item.path}>{t(item.label_key)}</a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+    <OfflineProvider deviceId={session?.deviceId} userId={session?.user?.id}>
+      <div className="app-shell">
+        <header className="app-shell-header">
+          <span>{session?.tenant?.name}</span>
+          <ConnectionBadge />
+          <button type="button" onClick={logout}>
+            {t('app.logout')}
+          </button>
+        </header>
+        <nav className="app-shell-menu" aria-label="Main menu">
+          {config.menu.length === 0 && <p>{t('app.menu.empty')}</p>}
+          <ul>
+            {config.menu.map((item) => (
+              <li key={item.code}>
+                <Link to={item.path}>{t(item.label_key)}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <main className="app-shell-content">
+          <Outlet context={config} />
+        </main>
+      </div>
+    </OfflineProvider>
+  );
+}
+
+/**
+ * section 9 "Connection badge (Online / Offline / Syncing / Sync Error)
+ * with pending count on every screen" - lives in the shell (every routed
+ * screen renders inside it via <Outlet>), not duplicated per screen.
+ */
+function ConnectionBadge() {
+  const { status, flush } = useOffline();
+  const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+
+  const label = !isOnline
+    ? t('sync.badge.offline')
+    : status.state === 'syncing'
+      ? t('sync.badge.syncing')
+      : status.state === 'error'
+        ? t('sync.badge.error')
+        : status.pending > 0
+          ? t('sync.badge.pending')
+          : t('sync.badge.online');
+
+  return (
+    <div className={`connection-badge connection-badge--${status.state}`}>
+      <span>{label}</span>
+      {status.pending > 0 && <span className="connection-badge-count">{status.pending}</span>}
+      <button type="button" onClick={flush}>
+        {t('sync.badge.sync_now')}
+      </button>
     </div>
   );
 }

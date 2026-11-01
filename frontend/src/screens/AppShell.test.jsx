@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AppShell from './AppShell';
 import { AuthProvider } from '../auth/AuthContext';
@@ -10,12 +11,23 @@ beforeEach(() => {
     JSON.stringify({
       accessToken: 'tok',
       refreshToken: 'ref',
-      user: { username: 'owner' },
+      user: { id: 1, username: 'owner' },
       tenant: { name: 'Test Shop' },
+      deviceId: 'DEV-1',
     }),
   );
   vi.restoreAllMocks();
 });
+
+function renderAppShell() {
+  return render(
+    <AuthProvider>
+      <MemoryRouter>
+        <AppShell />
+      </MemoryRouter>
+    </AuthProvider>,
+  );
+}
 
 describe('AppShell', () => {
   it('renders the menu entries returned by GET /tenant/config and nothing hardcoded', async () => {
@@ -32,13 +44,11 @@ describe('AppShell', () => {
       }),
     });
 
-    render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
-    );
+    renderAppShell();
 
-    await waitFor(() => expect(screen.getByRole('link')).toHaveAttribute('href', '/pos'));
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'menu.pos' })).toHaveAttribute('href', '/pos'),
+    );
   });
 
   it('shows the empty-menu guidance when no modules are enabled, rather than a blank screen', async () => {
@@ -49,11 +59,7 @@ describe('AppShell', () => {
       }),
     });
 
-    render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
-    );
+    renderAppShell();
 
     expect(
       await screen.findByText('No menu items are enabled for this account yet.'),
