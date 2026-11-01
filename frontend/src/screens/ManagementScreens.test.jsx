@@ -6,6 +6,8 @@ import { ProductsScreen } from './ProductsScreen';
 import { InventoryScreen } from './InventoryScreen';
 import { CustomersScreen } from './CustomersScreen';
 import { ReportsScreen } from './ReportsScreen';
+import { TransfersScreen } from './TransfersScreen';
+import { ReconciliationsScreen } from './ReconciliationsScreen';
 import { AuthProvider } from '../auth/AuthContext';
 import { t } from '../i18n';
 
@@ -252,6 +254,71 @@ describe('Management & Operational Dashboard Screens', () => {
         expect(screen.getByText('45000.0000')).toBeInTheDocument();
         expect(screen.getByText('3500.0000')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('TransfersScreen', () => {
+    it('fetches and renders transfers and allows creating a transfer', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: async () => ({
+          success: true,
+          data: [
+            {
+              id: 1,
+              transfer_number: 'TRF-TEST-01',
+              source_warehouse: 'Central Warehouse',
+              destination_warehouse: 'Outlet 1',
+              status: 'dispatched',
+              dispatched_at: '2026-11-01T10:00:00Z',
+            },
+          ],
+        }),
+      });
+
+      render(
+        <AuthProvider>
+          <TransfersScreen />
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('TRF-TEST-01')).toBeInTheDocument();
+        expect(screen.getByText('Central Warehouse')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText(`+ ${t('transfers.create')}`));
+      expect(screen.getByText(t('transfers.modal.create_title'))).toBeInTheDocument();
+    });
+  });
+
+  describe('ReconciliationsScreen', () => {
+    it('fetches and renders reconciliations list and opens start modal', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: async () => ({
+          success: true,
+          data: [
+            {
+              id: 1,
+              reference_number: 'REC-TEST-01',
+              warehouse: 'Central Warehouse',
+              status: 'in_progress',
+            },
+          ],
+        }),
+      });
+
+      render(
+        <AuthProvider>
+          <ReconciliationsScreen />
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('REC-TEST-01')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText(`+ ${t('reconciliations.start')}`));
+      expect(screen.getByText(t('reconciliations.modal.start_title'))).toBeInTheDocument();
     });
   });
 });

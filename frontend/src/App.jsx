@@ -9,6 +9,8 @@ import { ProductsScreen } from './screens/ProductsScreen';
 import { InventoryScreen } from './screens/InventoryScreen';
 import { CustomersScreen } from './screens/CustomersScreen';
 import { ReportsScreen } from './screens/ReportsScreen';
+import { TransfersScreen } from './screens/TransfersScreen';
+import { ReconciliationsScreen } from './screens/ReconciliationsScreen';
 
 function Root() {
   const { session } = useAuth();
@@ -29,6 +31,8 @@ function Root() {
           <Route path="inventory" element={<InventoryScreen />} />
           <Route path="customers" element={<CustomersScreen />} />
           <Route path="reports" element={<ReportsScreen />} />
+          <Route path="transfers" element={<TransfersScreen />} />
+          <Route path="reconciliations" element={<ReconciliationsScreen />} />
           <Route path="*" element={<Navigate to="/pos" replace />} />
         </Route>
       </Routes>

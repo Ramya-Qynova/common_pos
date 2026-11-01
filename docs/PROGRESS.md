@@ -3,8 +3,25 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 10 — Management Screens & Operational Dashboard (Catalogue, Inventory, Customers, Sales History, Reports): **complete** (tagged `phase-10-complete`).
-Phases 0 through 10 are **complete** (tagged `phase-0-complete` through `phase-10-complete`). See `docs/reports/phase-10.md` for Phase 10 details.
+Phase 11 — Multi-Warehouse Stock Transfers, Transit Tracking & Stock Reconciliation (Release 2, Item 1): **complete** (tagged `phase-11-complete`).
+Phases 0 through 11 are **complete** (tagged `phase-0-complete` through `phase-11-complete`). See `docs/reports/phase-11.md` for Phase 11 details.
+
+## Done (Phase 11, on top of Phases 0-10)
+- Stock Transfers & In-Transit Tracking:
+  - Database schema & models (`StockTransfer`, `StockTransferItem`).
+  - `StockTransferService`: Multi-item transfers, atomic dispatch decrements source stock at weighted average cost, receipt increments destination warehouse, transit discrepancy tracking, cancel with automatic stock reversal.
+  - `StockTransferController` (`GET`, `POST`, `show`, `dispatch`, `receive`, `cancel`).
+  - `TransfersScreen.jsx`: Transfer table with status badges, create modal (manual/auto dispatch), and receive modal with discrepancy input.
+- Physical Stock Reconciliation / Stocktake:
+  - Database schema & models (`StockReconciliation`, `StockReconciliationItem`).
+  - `StockReconciliationService`: Automatic system quantity/cost snapshotting per warehouse, physical count recording with live difference/variance computation, atomic completion posting balancing compensatory movements (`in` for surplus, `out` for deficit) ensuring stock balance strictly equals physical count.
+  - `StockReconciliationController` (`GET`, `POST`, `show`, `submitCounts`, `complete`, `cancel`).
+  - `ReconciliationsScreen.jsx`: Stocktake management table, start modal, count audit sheet, and completion action.
+- Quality Gates & Invariants:
+  - 144 backend Pest tests (609 assertions) passing (10 new tests for transfers & reconciliation).
+  - 43 frontend Vitest tests (11 test suites) passing.
+  - Zero dynamic-only rule violations (`scripts/check-dynamic-only.js`).
+  - Pint, ESLint, and Vite production build clean. Tagged `phase-11-complete`.
 
 ## Done (Phase 10, on top of Phases 0-9)
 - Operational Management Screens:

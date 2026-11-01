@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\SaleReturnController;
 use App\Http\Controllers\Api\V1\ShiftController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
+use App\Http\Controllers\Api\V1\StockReconciliationController;
+use App\Http\Controllers\Api\V1\StockTransferController;
 use App\Http\Controllers\Api\V1\SyncConflictController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TemplateUpdateController;
@@ -109,6 +111,20 @@ Route::prefix('v1')->group(function () {
             Route::get('/shifts/current', [ShiftController::class, 'current'])->middleware('permission:pos.shift.open');
             Route::post('/shifts/open', [ShiftController::class, 'open'])->middleware('permission:pos.shift.open');
             Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->middleware('permission:pos.shift.close');
+
+            Route::get('/stock-transfers', [StockTransferController::class, 'index'])->middleware('permission:inventory.transfer');
+            Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware('permission:inventory.transfer');
+            Route::get('/stock-transfers/{id}', [StockTransferController::class, 'show'])->middleware('permission:inventory.transfer');
+            Route::post('/stock-transfers/{id}/dispatch', [StockTransferController::class, 'dispatch'])->middleware('permission:inventory.transfer');
+            Route::post('/stock-transfers/{id}/receive', [StockTransferController::class, 'receive'])->middleware('permission:inventory.transfer');
+            Route::post('/stock-transfers/{id}/cancel', [StockTransferController::class, 'cancel'])->middleware('permission:inventory.transfer');
+
+            Route::get('/stock-reconciliations', [StockReconciliationController::class, 'index'])->middleware('permission:inventory.adjust');
+            Route::post('/stock-reconciliations', [StockReconciliationController::class, 'store'])->middleware('permission:inventory.adjust');
+            Route::get('/stock-reconciliations/{id}', [StockReconciliationController::class, 'show'])->middleware('permission:inventory.adjust');
+            Route::post('/stock-reconciliations/{id}/submit-counts', [StockReconciliationController::class, 'submitCounts'])->middleware('permission:inventory.adjust');
+            Route::post('/stock-reconciliations/{id}/complete', [StockReconciliationController::class, 'complete'])->middleware('permission:inventory.adjust');
+            Route::post('/stock-reconciliations/{id}/cancel', [StockReconciliationController::class, 'cancel'])->middleware('permission:inventory.adjust');
         });
     });
 });

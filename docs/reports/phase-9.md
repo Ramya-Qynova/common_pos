@@ -69,3 +69,4 @@ No new migrations (uses existing Phase 1–8 tables).
 - **D-0051**: Fixed shift-close confirmation rendering bug.
 - **D-0052**: Client-side cart preview displays subtotal; authoritative grand total calculated by server/sync engine (G1).
 - **D-0053**: POS checkout always enqueues via offline outbox abstraction, unifying online and offline billing.
+
