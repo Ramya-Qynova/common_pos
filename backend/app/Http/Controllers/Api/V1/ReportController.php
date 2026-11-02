@@ -72,4 +72,64 @@ class ReportController extends Controller
             'outstanding' => $this->reports->outstanding($tenantId),
         ]);
     }
+
+    public function profitLoss(Request $request)
+    {
+        $data = Validator::make($request->all(), [
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'branch_id' => 'nullable|integer',
+        ])->validate();
+
+        $tenantId = app(TenantContext::class)->tenantId();
+        $branchId = $data['branch_id'] ?? null;
+        $from = $data['from'] ?? now()->startOfDay()->toDateTimeString();
+        $to = $data['to'] ?? now()->endOfDay()->toDateTimeString();
+
+        return ApiResponse::success($this->reports->profitLoss($tenantId, $from, $to, $branchId));
+    }
+
+    public function taxBreakdown(Request $request)
+    {
+        $data = Validator::make($request->all(), [
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'branch_id' => 'nullable|integer',
+        ])->validate();
+
+        $tenantId = app(TenantContext::class)->tenantId();
+        $branchId = $data['branch_id'] ?? null;
+        $from = $data['from'] ?? now()->startOfDay()->toDateTimeString();
+        $to = $data['to'] ?? now()->endOfDay()->toDateTimeString();
+
+        return ApiResponse::success($this->reports->taxBreakdown($tenantId, $from, $to, $branchId));
+    }
+
+    public function inventoryValuation(Request $request)
+    {
+        $data = Validator::make($request->all(), [
+            'branch_id' => 'nullable|integer',
+        ])->validate();
+
+        $tenantId = app(TenantContext::class)->tenantId();
+        $branchId = $data['branch_id'] ?? null;
+
+        return ApiResponse::success($this->reports->inventoryValuationDetail($tenantId, $branchId));
+    }
+
+    public function cashReconciliation(Request $request)
+    {
+        $data = Validator::make($request->all(), [
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'branch_id' => 'nullable|integer',
+        ])->validate();
+
+        $tenantId = app(TenantContext::class)->tenantId();
+        $branchId = $data['branch_id'] ?? null;
+        $from = $data['from'] ?? now()->startOfDay()->toDateTimeString();
+        $to = $data['to'] ?? now()->endOfDay()->toDateTimeString();
+
+        return ApiResponse::success($this->reports->cashReconciliation($tenantId, $from, $to, $branchId));
+    }
 }

@@ -3,13 +3,34 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 14 — Two-Factor Authentication (2FA / MFA / TOTP & Recovery Codes) (Release 2, Item 4): **complete** (tagged `phase-14-complete`).
-Phases 0 through 14 are **complete** (tagged `phase-0-complete` through `phase-14-complete`). See `docs/reports/phase-14.md` for Phase 14 details.
+Phase 15 — Advanced Business Reports & Financial Analytics (Release 2, Item 5): **complete** (tagged `phase-15-complete`).
+Phases 0 through 15 are **complete** (tagged `phase-0-complete` through `phase-15-complete`). See `docs/reports/phase-15.md` for Phase 15 details.
 
 ## Remaining Phases (Release 2 & Final Acceptance)
-- **Phase 15**: Advanced Business Reports & Financial Analytics (P&L statement, Tax breakdown by component CGST/SGST/IGST, Stock valuation by category/warehouse, Shift cash reconciliation analytics).
 - **Phase 16**: External Integrations & Data Exchange (Outgoing signed webhooks delivery engine with HMAC-SHA256 signatures, event dispatcher, and Generic accounting CSV export center).
 - **Phase 17**: Release 2 Final Hardening, Acceptance Audit & Documentation (Comprehensive Section 15 acceptance verification, seeded demo tenant, runbook update, and final delivery report).
+
+## Done (Phase 15, on top of Phases 0-14)
+- Advanced Financial Analytics & Reporting Engine (Release 2, Item 5):
+  - Profit & Loss (P&L) Statement: `ReportService::profitLoss()` computing Gross Sales, Discounts, Returns, Net Sales, COGS, Gross Profit, Operating Expenses (`expenses` table in period), and Net Profit.
+  - Tax Component Breakdown: `ReportService::taxBreakdown()` calculating taxable base, collected tax, refunded tax on returns, and net tax payable per tax code (`CGST`, `SGST`, `IGST`, `VAT`, etc.).
+  - Inventory Valuation & Stock Summary: `ReportService::inventoryValuationDetail()` summarizing total SKUs, total units on hand, total inventory valuation, and count of low-stock items (at or below reorder threshold), grouped by Warehouse and by Product Category.
+  - Shift & Cash Drawer Reconciliation: `ReportService::cashReconciliation()` auditing closed shifts with opening cash, cash sales, cash refunds, paid drawer expenses, cash in/out, expected cash, counted closing cash, and variance.
+- Backend Endpoints & Test Suite:
+  - `GET /reports/profit-loss`
+  - `GET /reports/tax-breakdown`
+  - `GET /reports/inventory-valuation`
+  - `GET /reports/cash-reconciliation`
+  - Feature test `AdvancedReportsTest.php` with 40 hand-verified assertions.
+- Frontend Interactive Reports Dashboard:
+  - `ReportsScreen.jsx` updated with 5 tab views (`Executive Summary`, `Profit & Loss`, `Tax Breakdown`, `Stock Valuation`, `Cash Reconciliation`).
+  - Strict compliance with Dynamic-Only Rule (G12): zero hardcoded strings.
+  - Responsive tables and formatted financial summary cards.
+- Quality Gates & Invariants:
+  - 157 backend Pest tests (816 assertions) passing.
+  - 47 frontend Vitest tests (11 test suites) passing.
+  - Zero dynamic-only rule violations (`node scripts/check-dynamic-only.js`).
+  - Pint (0 violations), ESLint (0 errors), and Vite production build clean. Tagged `phase-15-complete`.
 
 ## Done (Phase 14, on top of Phases 0-13)
 - Two-Factor Authentication (Release 2, Item 4):

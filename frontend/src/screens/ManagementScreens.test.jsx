@@ -317,6 +317,66 @@ describe('Management & Operational Dashboard Screens', () => {
         expect(screen.getByText('3500.0000')).toBeInTheDocument();
       });
     });
+
+    it('switches between tabs and displays financial reports', async () => {
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes('/reports/tax-breakdown')) {
+          return Promise.resolve({
+            json: async () => ({
+              success: true,
+              data: {
+                components: [
+                  {
+                    tax_code: 'GST18',
+                    taxable_amount: '1000.0000',
+                    collected_amount: '180.0000',
+                    refunded_amount: '0.0000',
+                    net_amount: '180.0000',
+                  },
+                ],
+                totals: {
+                  taxable_amount: '1000.0000',
+                  collected_amount: '180.0000',
+                  refunded_amount: '0.0000',
+                  net_amount: '180.0000',
+                },
+              },
+            }),
+          });
+        }
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: {
+              gross_sales: '1000.0000',
+              net_sales: '1000.0000',
+              tax_total: '180.0000',
+              cogs: '600.0000',
+              gross_profit: '400.0000',
+              stock_valuation: '5000.0000',
+              outstanding_balance: '0.0000',
+            },
+          }),
+        });
+      });
+
+      render(
+        <AuthProvider>
+          <ReportsScreen />
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText('1000.0000').length).toBeGreaterThanOrEqual(1);
+      });
+
+      fireEvent.click(screen.getByText(t('reports.tab.tax')));
+
+      await waitFor(() => {
+        expect(screen.getByText('GST18')).toBeInTheDocument();
+        expect(screen.getAllByText('180.0000').length).toBeGreaterThanOrEqual(1);
+      });
+    });
   });
 
   describe('TransfersScreen', () => {

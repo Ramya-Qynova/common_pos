@@ -118,6 +118,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/inventory/balances', [InventoryController::class, 'balances'])->middleware('permission:pos.sales.create');
             Route::get('/inventory/cost-layers', [InventoryController::class, 'costLayers'])->middleware('permission:pos.sales.create');
             Route::get('/reports/summary', [ReportController::class, 'summary'])->middleware('permission:reports.view');
+            Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->middleware('permission:reports.view');
+            Route::get('/reports/tax-breakdown', [ReportController::class, 'taxBreakdown'])->middleware('permission:reports.view');
+            Route::get('/reports/inventory-valuation', [ReportController::class, 'inventoryValuation'])->middleware('permission:reports.view');
+            Route::get('/reports/cash-reconciliation', [ReportController::class, 'cashReconciliation'])->middleware('permission:reports.view');
 
             Route::get('/shifts/current', [ShiftController::class, 'current'])->middleware('permission:pos.shift.open');
             Route::post('/shifts/open', [ShiftController::class, 'open'])->middleware('permission:pos.shift.open');

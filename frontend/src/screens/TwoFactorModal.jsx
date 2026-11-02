@@ -267,3 +267,4 @@ export function TwoFactorModal({ isOpen, onClose }) {
     </div>
   );
 }
+
