@@ -3,8 +3,25 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 11 — Multi-Warehouse Stock Transfers, Transit Tracking & Stock Reconciliation (Release 2, Item 1): **complete** (tagged `phase-11-complete`).
-Phases 0 through 11 are **complete** (tagged `phase-0-complete` through `phase-11-complete`). See `docs/reports/phase-11.md` for Phase 11 details.
+Phase 12 — FIFO Costing Engine & Cost Layer Depletion Strategy (Release 2, Item 2): **complete** (tagged `phase-12-complete`).
+Phases 0 through 12 are **complete** (tagged `phase-0-complete` through `phase-12-complete`). See `docs/reports/phase-12.md` for Phase 12 details.
+
+## Done (Phase 12, on top of Phases 0-11)
+- Dynamic Costing Strategy Architecture:
+  - Strategy pattern with `CostingStrategyInterface`, `WeightedAverageCostingStrategy`, `FifoCostingStrategy`.
+  - `CostingStrategyFactory`: Dynamically selects costing strategy from tenant setting `inventory.costing_method` (`'weighted_average'` vs `'fifo'`).
+  - `CostLayer` model enhanced with relationships and decimal casts.
+- Stock Movement Integration:
+  - Inflow movements create cost layers when tenant is configured for FIFO.
+  - Outflow movements deplete oldest cost layers first (`ORDER BY received_at ASC, id ASC`) with pessimistic locking (`lockForUpdate()`), computing blended COGS and updating inventory balance valuation.
+- Cost Layers Inspection API & UI:
+  - `GET /api/v1/inventory/cost-layers` endpoint returning active layers with quantities and costs.
+  - `InventoryScreen.jsx` updated with "Cost Layers" inspection button and modal showing remaining layers.
+- Quality Gates & Invariants:
+  - 147 backend Pest tests (632 assertions) passing (3 new comprehensive tests in `FifoCostingTest.php`).
+  - 44 frontend Vitest tests (11 test suites) passing.
+  - Zero dynamic-only rule violations (`node scripts/check-dynamic-only.js`).
+  - Pint, ESLint, and Vite production build clean. Tagged `phase-12-complete`.
 
 ## Done (Phase 11, on top of Phases 0-10)
 - Stock Transfers & In-Transit Tracking:

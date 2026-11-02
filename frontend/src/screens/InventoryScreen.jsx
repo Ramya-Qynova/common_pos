@@ -14,6 +14,12 @@ export function InventoryScreen() {
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
+  // FIFO cost layers modal states
+  const [selectedProductForLayers, setSelectedProductForLayers] = useState(null);
+  const [costLayers, setCostLayers] = useState([]);
+  const [layersLoading, setLayersLoading] = useState(false);
+  const [layersError, setLayersError] = useState(null);
+
   // Adjustment form states
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('1.0000');
@@ -66,6 +72,33 @@ export function InventoryScreen() {
       cancelled = true;
     };
   }, [apiBase, session?.tokens?.access_token, lowStockOnly, reloadKey]);
+
+  const handleViewCostLayers = async (balance) => {
+    setSelectedProductForLayers(balance);
+    setLayersLoading(true);
+    setLayersError(null);
+    try {
+      const res = await fetch(
+        `${apiBase}/inventory/cost-layers?warehouse_id=${balance.warehouse_id}&product_id=${balance.product_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.tokens?.access_token}`,
+            Accept: 'application/json',
+          },
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setCostLayers(data.data || []);
+      } else {
+        setLayersError(data.error?.message || t('common.error'));
+      }
+    } catch (err) {
+      setLayersError(err.message);
+    } finally {
+      setLayersLoading(false);
+    }
+  };
 
   const handleAdjustStock = async (e) => {
     e.preventDefault();
@@ -158,6 +191,7 @@ export function InventoryScreen() {
                 <th>{t('inventory.col.cost')}</th>
                 <th>{t('inventory.col.value')}</th>
                 <th>{t('sales.col.status')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -174,6 +208,15 @@ export function InventoryScreen() {
                     {b.is_low_stock && (
                       <span className="badge-warning">{t('inventory.low_stock')}</span>
                     )}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => handleViewCostLayers(b)}
+                    >
+                      {t('inventory.action.view_layers')}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -255,6 +298,70 @@ export function InventoryScreen() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedProductForLayers && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setSelectedProductForLayers(null)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                {t('inventory.cost_layers.title')} — {selectedProductForLayers.product_name}
+              </h3>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setSelectedProductForLayers(null)}
+                aria-label={t('common.close')}
+              >
+                &times;
+              </button>
+            </div>
+            {layersLoading ? (
+              <div className="state-panel">{t('common.loading')}</div>
+            ) : layersError ? (
+              <div className="state-panel error">{layersError}</div>
+            ) : costLayers.length === 0 ? (
+              <div className="state-panel empty">{t('inventory.cost_layers.empty')}</div>
+            ) : (
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>{t('inventory.cost_layers.layer')}</th>
+                      <th>{t('inventory.cost_layers.received')}</th>
+                      <th>{t('inventory.cost_layers.remaining')}</th>
+                      <th>{t('inventory.cost_layers.unit_cost')}</th>
+                      <th>{t('inventory.cost_layers.total_value')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {costLayers.map((layer) => (
+                      <tr key={layer.id}>
+                        <td className="font-mono">{layer.id}</td>
+                        <td>{layer.received_at ? new Date(layer.received_at).toLocaleDateString() : ''}</td>
+                        <td className="font-bold">{layer.quantity_remaining}</td>
+                        <td>{layer.unit_cost}</td>
+                        <td>{layer.total_value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedProductForLayers(null)}
+              >
+                {t('common.close')}
+              </button>
+            </div>
           </div>
         </div>
       )}

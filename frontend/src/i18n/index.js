@@ -236,6 +236,14 @@ const DEV_DICTIONARY = {
     'inventory.adjust.reason.reconciliation': 'Physical Inventory Count',
     'inventory.adjust.submit': 'Apply Adjustment',
     'inventory.adjust.applying': 'Applying…',
+    'inventory.action.view_layers': 'Cost Layers',
+    'inventory.cost_layers.title': 'FIFO Cost Layers',
+    'inventory.cost_layers.layer': 'Layer ID',
+    'inventory.cost_layers.received': 'Received At',
+    'inventory.cost_layers.remaining': 'Qty Remaining',
+    'inventory.cost_layers.unit_cost': 'Unit Cost',
+    'inventory.cost_layers.total_value': 'Total Value',
+    'inventory.cost_layers.empty': 'No active FIFO cost layers for this product.',
   },
 };
 

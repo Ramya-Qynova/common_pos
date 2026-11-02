@@ -106,6 +106,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/customers/{id}/ledger', [CustomerController::class, 'ledger'])->middleware('permission:customers.manage');
 
             Route::get('/inventory/balances', [InventoryController::class, 'balances'])->middleware('permission:pos.sales.create');
+            Route::get('/inventory/cost-layers', [InventoryController::class, 'costLayers'])->middleware('permission:pos.sales.create');
             Route::get('/reports/summary', [ReportController::class, 'summary'])->middleware('permission:reports.view');
 
             Route::get('/shifts/current', [ShiftController::class, 'current'])->middleware('permission:pos.shift.open');

@@ -6,6 +6,8 @@ use App\Exceptions\ApiException;
 use App\Models\StockBalance;
 use App\Models\StockLedger;
 use App\Services\Audit\AuditLogger;
+use App\Services\Inventory\Costing\CostingStrategyFactory;
+use App\Services\Inventory\Costing\FifoCostingStrategy;
 use App\Services\Settings\SettingsService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
@@ -24,7 +26,12 @@ use Illuminate\Support\Str;
  */
 class StockService
 {
-    public function __construct(private SettingsService $settings) {}
+    public function __construct(
+        private SettingsService $settings,
+        private ?CostingStrategyFactory $costingFactory = null
+    ) {
+        $this->costingFactory ??= new CostingStrategyFactory($this->settings);
+    }
 
     /**
      * @param  array<int,array{warehouse_id:int,product_id:int,variant_id?:int|null,batch_id?:int|null,direction:'in'|'out',quantity:string,unit_cost?:string|null,source_type:string,source_id?:int|null,source_line_id?:int|null,reason?:string|null}>  $movements
@@ -114,6 +121,7 @@ class StockService
         $tenantId = $balance->tenant_id;
         $direction = $movement['direction'];
         $quantity = $movement['quantity'];
+        $costingStrategy = $this->costingFactory->forTenant($tenantId);
 
         if ($direction === 'out') {
             $allowNegative = $context['allow_negative'] ?? (bool) $this->settings->get('inventory.allow_negative_stock', $tenantId);
@@ -121,17 +129,33 @@ class StockService
                 throw new ApiException('INSUFFICIENT_STOCK', "Insufficient stock for product #{$balance->product_id}.", 409);
             }
 
-            $unitCost = $balance->average_cost;
+            $costResult = $costingStrategy->calculateOutflowCost($balance, $quantity, $context);
+            $unitCost = $costResult['unit_cost'];
             $newQty = bcsub($balance->quantity, $quantity, 4);
-            $newAvgCost = $balance->average_cost;
+
+            if ($costingStrategy instanceof FifoCostingStrategy) {
+                $newAvgCost = bccomp($newQty, '0.0000', 4) > 0
+                    ? bcdiv($costingStrategy->getValuation($balance), $newQty, 4)
+                    : '0.0000';
+            } else {
+                $newAvgCost = $balance->average_cost;
+            }
         } else {
             $unitCost = $movement['unit_cost'] ?? throw new \InvalidArgumentException('unit_cost is required for an incoming stock movement.');
-            $currentValue = bcmul($balance->quantity, $balance->average_cost, 4);
-            $incomingValue = bcmul($quantity, $unitCost, 4);
+            $costingStrategy->recordInflow($balance, $quantity, $unitCost, $context);
             $newQty = bcadd($balance->quantity, $quantity, 4);
-            $newAvgCost = bccomp($newQty, '0.0000', 4) > 0
-                ? bcdiv(bcadd($currentValue, $incomingValue, 4), $newQty, 4)
-                : '0.0000';
+
+            if ($costingStrategy instanceof FifoCostingStrategy) {
+                $newAvgCost = bccomp($newQty, '0.0000', 4) > 0
+                    ? bcdiv($costingStrategy->getValuation($balance), $newQty, 4)
+                    : '0.0000';
+            } else {
+                $currentValue = bcmul($balance->quantity, $balance->average_cost, 4);
+                $incomingValue = bcmul($quantity, $unitCost, 4);
+                $newAvgCost = bccomp($newQty, '0.0000', 4) > 0
+                    ? bcdiv(bcadd($currentValue, $incomingValue, 4), $newQty, 4)
+                    : '0.0000';
+            }
         }
 
         $ledger = StockLedger::create([

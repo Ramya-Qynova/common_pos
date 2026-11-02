@@ -164,6 +164,67 @@ describe('Management & Operational Dashboard Screens', () => {
       fireEvent.click(screen.getByText(`+ ${t('inventory.adjust')}`));
       expect(screen.getByText(t('inventory.adjust.title'))).toBeInTheDocument();
     });
+
+    it('opens cost layers modal and displays active FIFO layers', async () => {
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes('/inventory/cost-layers')) {
+          return Promise.resolve({
+            json: async () => ({
+              success: true,
+              data: [
+                {
+                  id: 42,
+                  warehouse_id: 1,
+                  product_id: 10,
+                  quantity_remaining: '8.0000',
+                  unit_cost: '12.5000',
+                  total_value: '100.0000',
+                  received_at: '2026-11-01T10:00:00.000Z',
+                },
+              ],
+            }),
+          });
+        }
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                id: 1,
+                product_id: 10,
+                warehouse_id: 1,
+                warehouse_name: 'Main Warehouse',
+                product_name: 'FIFO Item',
+                sku: 'FIFO-01',
+                unit: 'pcs',
+                quantity: '8.0000',
+                average_cost: '12.5000',
+                total_value: '100.0000',
+                is_low_stock: false,
+              },
+            ],
+          }),
+        });
+      });
+
+      render(
+        <AuthProvider>
+          <InventoryScreen />
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('FIFO Item')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText(t('inventory.action.view_layers')));
+
+      await waitFor(() => {
+        expect(screen.getByText(/FIFO Cost Layers/i)).toBeInTheDocument();
+        expect(screen.getByText('8.0000')).toBeInTheDocument();
+        expect(screen.getByText('12.5000')).toBeInTheDocument();
+      });
+    });
   });
 
   describe('CustomersScreen', () => {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\CostLayer;
 use App\Models\Product;
 use App\Models\StockBalance;
 use App\Models\Unit;
@@ -74,5 +75,44 @@ class InventoryController extends Controller
             'total' => $paginator->total(),
             'last_page' => $paginator->lastPage(),
         ]);
+    }
+
+    public function costLayers(Request $request)
+    {
+        $data = Validator::make($request->all(), [
+            'warehouse_id' => 'nullable|integer',
+            'product_id' => 'nullable|integer',
+        ])->validate();
+
+        $tenantId = app(TenantContext::class)->tenantId();
+
+        $query = CostLayer::withoutTenantScope()
+            ->where('tenant_id', $tenantId)
+            ->where('quantity_remaining', '>', 0)
+            ->with(['product:id,sku,name', 'warehouse:id,name'])
+            ->orderBy('received_at', 'asc');
+
+        if (! empty($data['warehouse_id'])) {
+            $query->where('warehouse_id', $data['warehouse_id']);
+        }
+
+        if (! empty($data['product_id'])) {
+            $query->where('product_id', $data['product_id']);
+        }
+
+        $layers = $query->get()->map(fn (CostLayer $cl) => [
+            'id' => $cl->id,
+            'warehouse_id' => $cl->warehouse_id,
+            'warehouse_name' => $cl->warehouse?->name,
+            'product_id' => $cl->product_id,
+            'product_name' => $cl->product?->name,
+            'sku' => $cl->product?->sku,
+            'quantity_remaining' => (string) $cl->quantity_remaining,
+            'unit_cost' => (string) $cl->unit_cost,
+            'total_value' => bcmul((string) $cl->quantity_remaining, (string) $cl->unit_cost, 4),
+            'received_at' => $cl->received_at?->toISOString() ?? (string) $cl->received_at,
+        ]);
+
+        return ApiResponse::success($layers->all());
     }
 }
