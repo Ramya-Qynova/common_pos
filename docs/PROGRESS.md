@@ -3,8 +3,30 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 13 — Textile, Medical & Wholesale Business Templates & Vertical Workflows (Release 2, Item 3): **complete** (tagged `phase-13-complete`).
-Phases 0 through 13 are **complete** (tagged `phase-0-complete` through `phase-13-complete`). See `docs/reports/phase-13.md` for Phase 13 details.
+Phase 14 — Two-Factor Authentication (2FA / MFA / TOTP & Recovery Codes) (Release 2, Item 4): **complete** (tagged `phase-14-complete`).
+Phases 0 through 14 are **complete** (tagged `phase-0-complete` through `phase-14-complete`). See `docs/reports/phase-14.md` for Phase 14 details.
+
+## Remaining Phases (Release 2 & Final Acceptance)
+- **Phase 15**: Advanced Business Reports & Financial Analytics (P&L statement, Tax breakdown by component CGST/SGST/IGST, Stock valuation by category/warehouse, Shift cash reconciliation analytics).
+- **Phase 16**: External Integrations & Data Exchange (Outgoing signed webhooks delivery engine with HMAC-SHA256 signatures, event dispatcher, and Generic accounting CSV export center).
+- **Phase 17**: Release 2 Final Hardening, Acceptance Audit & Documentation (Comprehensive Section 15 acceptance verification, seeded demo tenant, runbook update, and final delivery report).
+
+## Done (Phase 14, on top of Phases 0-13)
+- Two-Factor Authentication (Release 2, Item 4):
+  - RFC 6238 TOTP engine with HMAC-SHA1 dynamic binary code truncation and Base32 decoding (`TwoFactorAuthService`).
+  - Single-use hashed backup recovery codes (8 codes per user, consumed upon login).
+  - Short-lived cryptographically hashed challenge tokens (`TwoFactorChallenge`).
+  - Login flow integration: `POST /auth/login` returns `two_factor_required: true` when 2FA is active; `POST /auth/2fa/verify` validates TOTP or recovery code to issue access and rotating refresh tokens.
+  - User self-service lifecycle: `setup`, `confirm`, `disable`.
+- Frontend Operational UI:
+  - `LoginScreen.jsx`: Seamless reactive transition to 2FA challenge input upon `two_factor_required`.
+  - `TwoFactorModal.jsx`: Interactive 2FA activation, recovery code backup vault, and disable controls.
+  - `AuthContext.jsx`: `verifyTwoFactor` authentication pipeline.
+- Quality Gates & Invariants:
+  - 156 backend Pest tests (776 assertions) passing (5 new tests in `TwoFactorAuthTest.php`).
+  - 46 frontend Vitest tests (11 test suites) passing.
+  - Zero dynamic-only rule violations (`node scripts/check-dynamic-only.js`).
+  - Pint, ESLint, and Vite production build clean. Tagged `phase-14-complete`.
 
 ## Done (Phase 13, on top of Phases 0-12)
 - Industry Vertical Templates (Release 2, Item 3):

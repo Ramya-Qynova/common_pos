@@ -37,6 +37,7 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
     Route::post('/auth/refresh', [AuthController::class, 'refresh'])->middleware('throttle:20,1');
+    Route::post('/auth/2fa/verify', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:20,1');
 
     Route::middleware('tenant.auth')->group(function () {
         // section 9/13.2: a suspended/expired tenant's offline sales must still be
@@ -48,6 +49,9 @@ Route::prefix('v1')->group(function () {
         Route::middleware('tenant.active')->group(function () {
             Route::post('/auth/logout', [AuthController::class, 'logout']);
             Route::get('/auth/me', [AuthController::class, 'me']);
+            Route::post('/auth/2fa/setup', [AuthController::class, 'setupTwoFactor']);
+            Route::post('/auth/2fa/confirm', [AuthController::class, 'confirmTwoFactor']);
+            Route::post('/auth/2fa/disable', [AuthController::class, 'disableTwoFactor']);
             Route::get('/tenant/config', [TenantConfigController::class, 'show']);
 
             Route::post('/sales', [SaleController::class, 'store'])->middleware(['permission:pos.sales.create', 'idempotent']);

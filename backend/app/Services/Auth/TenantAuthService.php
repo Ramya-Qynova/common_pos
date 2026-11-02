@@ -53,6 +53,27 @@ class TenantAuthService
             throw new AuthenticationFailedException;
         }
 
+        if ($user->two_factor_enabled) {
+            $twoFactor = app(TwoFactorAuthService::class);
+            $challengeToken = $twoFactor->createChallenge($user, $deviceUuid, $deviceName, $ip, $userAgent);
+
+            SecurityEvent::create([
+                'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
+                'event_type' => 'two_factor_challenged',
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'created_at' => now(),
+            ]);
+
+            return [
+                'two_factor_required' => true,
+                'two_factor_token' => $challengeToken,
+                'user' => $user,
+                'tenant' => $tenant,
+            ];
+        }
+
         return DB::transaction(function () use ($tenant, $user, $deviceUuid, $deviceName, $ip, $userAgent) {
             $user->failed_login_count = 0;
             $user->locked_until = null;
@@ -79,6 +100,53 @@ class TenantAuthService
                 'ip_address' => $ip, 'user_agent' => $userAgent, 'created_at' => now(),
             ]);
             AuditLogger::log($tenant->id, $user->id, 'login', 'User', $user->id);
+
+            return ['tenant' => $tenant, 'user' => $user, 'tokens' => $pair];
+        });
+    }
+
+    public function completeTwoFactorLogin(string $challengeToken, string $codeOrRecovery, ?string $ip, ?string $userAgent): array
+    {
+        $twoFactor = app(TwoFactorAuthService::class);
+        $meta = $twoFactor->verifyChallenge($challengeToken, $codeOrRecovery);
+
+        /** @var User $user */
+        $user = $meta['user'];
+        $tenant = $user->tenant;
+
+        return DB::transaction(function () use ($tenant, $user, $meta, $ip, $userAgent) {
+            $user->failed_login_count = 0;
+            $user->locked_until = null;
+            $user->last_login_at = now();
+            $user->save();
+
+            $device = null;
+            if ($meta['device_uuid']) {
+                $device = Device::withoutTenantScope()->where('tenant_id', $tenant->id)->where('uuid', $meta['device_uuid'])->first();
+                if (! $device) {
+                    $device = Device::create([
+                        'tenant_id' => $tenant->id,
+                        'user_id' => $user->id,
+                        'uuid' => $meta['device_uuid'],
+                        'name' => $meta['device_name'],
+                        'last_seen_at' => now(),
+                    ]);
+                } else {
+                    $device->update(['last_seen_at' => now()]);
+                }
+            }
+
+            $pair = $this->issueTokens($tenant->id, $user->id, $device?->id, $ip ?? $meta['ip'], $userAgent ?? $meta['user_agent']);
+
+            SecurityEvent::create([
+                'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
+                'event_type' => 'login_success_2fa',
+                'ip_address' => $ip ?? $meta['ip'],
+                'user_agent' => $userAgent ?? $meta['user_agent'],
+                'created_at' => now(),
+            ]);
+            AuditLogger::log($tenant->id, $user->id, 'login.2fa', 'User', $user->id);
 
             return ['tenant' => $tenant, 'user' => $user, 'tokens' => $pair];
         });

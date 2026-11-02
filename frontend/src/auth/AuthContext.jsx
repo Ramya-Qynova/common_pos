@@ -49,6 +49,37 @@ export function AuthProvider({ children }) {
       },
     });
 
+    if (data.two_factor_required) {
+      return {
+        twoFactorRequired: true,
+        twoFactorToken: data.two_factor_token,
+      };
+    }
+
+    setAccessToken(data.access_token);
+    const nextSession = {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      user: data.user,
+      tenant: data.tenant,
+      deviceId,
+    };
+    setSession(nextSession);
+    persistSession(nextSession);
+
+    return nextSession;
+  }, []);
+
+  const verifyTwoFactor = useCallback(async (twoFactorToken, code) => {
+    const data = await apiRequest('/auth/2fa/verify', {
+      method: 'POST',
+      body: {
+        two_factor_token: twoFactorToken,
+        code,
+      },
+    });
+
+    const deviceId = getOrCreateDeviceId();
     setAccessToken(data.access_token);
     const nextSession = {
       accessToken: data.access_token,
@@ -73,7 +104,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ session, login, logout }), [session, login, logout]);
+  const value = useMemo(
+    () => ({ session, login, verifyTwoFactor, logout }),
+    [session, login, verifyTwoFactor, logout],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

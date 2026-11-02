@@ -74,4 +74,47 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('temporarily locked');
   });
+
+  it('switches to 2FA challenge when login requires two-factor and completes on valid code', async () => {
+    const onSuccess = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/auth/2fa/verify')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: {
+              access_token: 'two-factor-access-tok',
+              refresh_token: 'two-factor-refresh-tok',
+              user: { id: 1, username: 'owner', two_factor_enabled: true },
+              tenant: { shop_code: 'SHOP-1', name: 'Test Shop', status: 'active' },
+            },
+          }),
+        });
+      }
+      return Promise.resolve({
+        json: async () => ({
+          success: true,
+          data: {
+            two_factor_required: true,
+            two_factor_token: 'challenge-test-token',
+          },
+        }),
+      });
+    });
+
+    renderLoginScreen(onSuccess);
+    await fillAndSubmit();
+
+    // 2FA challenge screen should appear
+    expect(await screen.findByText('Two-Factor Authentication (2FA)')).toBeInTheDocument();
+
+    // Enter 2FA code and submit
+    fireEvent.input(screen.getByLabelText(/Authentication Code/i), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify & Sign In' }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(window.localStorage.getItem('pos.auth.session')).toContain('two-factor-access-tok');
+  });
 });
