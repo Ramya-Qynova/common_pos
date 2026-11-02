@@ -168,3 +168,49 @@ Known gaps this phase (tracked, not silently skipped, D-0044–D-0049): sync pus
 | n/a (device identity) | `frontend/src/offline/device.js`, wired into `frontend/src/auth/AuthContext.jsx`'s `login()` | `device_uuid`/`device_name` now sent at login (the backend's `TenantAuthService::login()` parameter existed since Phase 7 but was unused by the frontend until this phase) - required for device-scoped offline numbering and per-device revocation to mean anything from a real screen. |
 
 Known gaps this phase (tracked, not silently skipped, D-0050–D-0053): cart subtotal is a plain qty×price sum with no tax calculation (`GET /tenant/config` does not yet expose `tax_groups`/`rounding`; the server remains the sole source of the real `grand_total`, D-0052); only a single payment line is supported per sale (no split-tender UI yet); no held-bills/quick-add-customer/barcode-scan UI yet; the rest of section 11's catalogue (SA-xx, ON-xx, DASH-xx, SAL-xx, PRD-xx, INV-xx, PUR-xx, CUS-xx, FIN-xx, REP-xx, USR-xx, SET-xx, SYN-xx, TPL-VEG-xx, APR-xx, NOT-xx) has no screen yet — each is mapped here in the commit that actually builds it. Phase 2 and Phase 3 both built backend-only (D-0015, D-0019); a frontend pass against the now-stable catalogue/inventory/customer/supplier/shift API surface is still pending.
+
+---
+
+## Release 2 Traceability (Phases 11 - 17)
+
+### Phase 11 — Inter-Warehouse Stock Transfers & Physical Stocktake Reconciliation
+- **Requirements**: Section 8 "Inventory movements" & Section 13.1.
+- **Backend Implementation**: `StockTransferService.php`, `StockReconciliationService.php`, `StockTransfer.php`, `StockTransferItem.php`, `StockReconciliation.php`, `StockReconciliationItem.php`, `StockTransferController.php`, `StockReconciliationController.php`.
+- **Frontend Implementation**: `TransfersScreen.jsx`, `ReconciliationsScreen.jsx`.
+- **Automated Tests**: `tests/Feature/Inventory/StockTransferTest.php`, `tests/Feature/Inventory/StockReconciliationTest.php`.
+
+### Phase 12 — FIFO Costing Engine
+- **Requirements**: Section 8 "Inventory valuation (FIFO/weighted average)".
+- **Backend Implementation**: `CostingStrategyInterface.php`, `WeightedAverageCostingStrategy.php`, `FifoCostingStrategy.php`, `CostingStrategyFactory.php`, `CostLayer.php`, `InventoryController::costLayers()`.
+- **Frontend Implementation**: `InventoryScreen.jsx` (FIFO cost layer inspection modal).
+- **Automated Tests**: `tests/Feature/Inventory/FifoCostingTest.php`.
+
+### Phase 13 — Industry Vertical Templates & Dynamic Custom Fields
+- **Requirements**: Section 6 "Templates & vertical configuration" (Textile, Medical, Wholesale).
+- **Backend Implementation**: `VerticalTemplatesSeeder.php`, `TemplateUpdateService.php` (`custom_fields` provisioning), `TemplateController.php`, `CustomFieldController.php`.
+- **Frontend Implementation**: `TemplatesScreen.jsx` (Template catalog & custom fields inspector).
+- **Automated Tests**: `tests/Feature/Templates/VerticalTemplatesTest.php`.
+
+### Phase 14 — Two-Factor Authentication (2FA / TOTP)
+- **Requirements**: Section 13.1 & Section 14 "Security".
+- **Backend Implementation**: `TwoFactorAuthService.php` (RFC 6238 TOTP, Base32 decoder, SHA-1 dynamic truncation, single-use recovery codes), `TwoFactorChallenge.php`, `AuthController` (2FA challenge flow).
+- **Frontend Implementation**: `LoginScreen.jsx` (reactive 2FA token prompt), `TwoFactorModal.jsx` (QR code setup, recovery vault).
+- **Automated Tests**: `tests/Feature/Auth/TwoFactorAuthTest.php`.
+
+### Phase 15 — Advanced Business Reports & Financial Analytics
+- **Requirements**: Section 8 "Reports (defined once)" (P&L, Tax breakdown, Stock valuation, Cash reconciliation).
+- **Backend Implementation**: `ReportService.php` (`profitLoss`, `taxBreakdown`, `inventoryValuationDetail`, `cashReconciliation`), `ReportController.php`.
+- **Frontend Implementation**: `ReportsScreen.jsx` (5 operational tabs).
+- **Automated Tests**: `tests/Feature/Reports/AdvancedReportsTest.php`.
+
+### Phase 16 — External Integrations & Data Exchange
+- **Requirements**: Section 12 "Adapters", Section 14 "Webhooks & API Keys".
+- **Backend Implementation**: `WebhookService.php` (HMAC-SHA256 signatures, event dispatcher), `ApiKeyService.php` (SHA-256 token hashing), `AccountingExporter.php`, `GenericCsvAccountingExporter.php`, `WebhookController.php`, `ApiKeyController.php`, `AccountingExportController.php`.
+- **Frontend Implementation**: `IntegrationsScreen.jsx` (Outgoing Webhooks, API Access Keys, Accounting CSV Export).
+- **Automated Tests**: `tests/Feature/Integrations/WebhooksAndIntegrationsTest.php`.
+
+### Phase 17 — Release 2 Final Hardening, Acceptance Audit & Documentation
+- **Requirements**: Section 15 "FINAL ACCEPTANCE".
+- **Backend Implementation**: `SeedDemoTenant.php` (`php artisan demo:seed`).
+- **Audit Test Suite**: `tests/Feature/Acceptance/FinalAcceptanceTest.php` (Tenant isolation, permission guard, server price authority G1, atomic rollback, idempotency, ledger invariant G5, returns limit, audit logging).
+- **Documentation**: `README.md`, `docs/RUNBOOK.md`, `docs/TRACEABILITY.md`, `docs/reports/FINAL.md`.

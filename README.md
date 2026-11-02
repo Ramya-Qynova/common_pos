@@ -2,7 +2,19 @@
 
 Multi-tenant, multi-branch, online + offline point-of-sale for any type of shop. Built from [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) — read that file for the full specification; this README is just the setup and orientation.
 
-**Status:** Phase 8 (security/performance/backup/hosting) complete - all 8 build phases done. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for exactly what is done vs. pending, [`docs/reports/`](docs/reports/) for the per-phase reports with real executed test output, and [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for operations (backup/restore, deployment, incident response).
+**Status:** Release 1 (MVP) & Release 2 (Extended Enterprise) **100% complete** — all 18 phases (Phases 0 through 17) fully delivered and audited. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for full phase logs, [`docs/reports/FINAL.md`](docs/reports/FINAL.md) for the Section 15 final acceptance audit, and [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for operations (backup/restore, deployment, incident response).
+
+## Enterprise Capabilities (Release 1 + Release 2)
+- **Universal Multi-Tenancy**: Dynamic schema isolation, sub-branch & warehouse routing, strict global query scoping.
+- **Offline-First PWA**: IndexedDB / Dexie storage, device-scoped sequence numbering, automatic reconciliation push upon reconnect.
+- **Authoritative Server Pricing**: Dual-engine parity (PHP + JS golden vectors), client prices completely ignored (`G1`).
+- **Inventory Management**: Weighted average & FIFO costing layers, real-time stock balances strictly tied to append-only ledger (`G5`).
+- **Multi-Location Logistics**: Inter-warehouse stock transfers with dispatch/receive in-transit discrepancies, physical stocktake count reconciliation.
+- **Industry Vertical Templates**: General Retail, Grocery (weighing scale & barcodes), Textile (size/color matrix), Medical (FEFO & batch expiry), Wholesale (B2B tier pricing & credit limits).
+- **Two-Factor Authentication (2FA)**: RFC 6238 TOTP with Google Authenticator QR setup, single-use hashed recovery codes, temporary challenge tokens.
+- **Advanced Financial Analytics**: Comprehensive Profit & Loss (P&L), component-level tax breakdown (CGST/SGST/IGST/VAT), stock valuation, shift & drawer cash variance audit.
+- **Integrations & Data Exchange**: Outgoing signed webhooks with HMAC-SHA256 headers (`X-POS-Signature`), API access key management, and RFC 4180 Generic Accounting CSV export center (Sales Journal, General Ledger, Inventory Valuation).
+- **Dynamic-Only UI (G12)**: 100% dictionary-driven localized UI text (English & Tamil), zero hardcoded literal business data.
 
 ## Stack
 

@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
             AccountingExporter::class,
             GenericCsvAccountingExporter::class
         );
+        $this->app->bind(
+            AccountingExporter::class,
+            GenericCsvAccountingExporter::class
+        );
     }
 
     /**

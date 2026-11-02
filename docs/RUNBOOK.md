@@ -86,6 +86,12 @@ Beyond the health endpoint, `audit_logs` and `security_events` (queryable via `G
 - **Reopen a closed business day**: `POST /api/v1/daily-closings/{id}/reopen` (`finance.reopen`), with a required reason.
 - **Apply a template update** (new units/categories/lookups/modules/settings a template defines but a tenant doesn't have yet): `GET /api/v1/template/update-preview` then `POST /api/v1/template/update` (`core.settings.manage`) - always additive, never removes a tenant's own customization.
 - **Seed a demo tenant**: `php artisan demo:seed` (see section 1).
+- **Inter-Warehouse Stock Transfers**: Create transfer `POST /api/v1/stock-transfers`, dispatch stock `POST /api/v1/stock-transfers/{id}/dispatch`, receive at destination `POST /api/v1/stock-transfers/{id}/receive` with discrepancy tracking (`permission:inventory.transfer`).
+- **Physical Stock Reconciliation / Stocktake**: Initialize count sheet `POST /api/v1/stock-reconciliations`, submit physical quantities `POST /api/v1/stock-reconciliations/{id}/submit-counts`, post atomic reconciliation `POST /api/v1/stock-reconciliations/{id}/complete` (`permission:inventory.adjust`).
+- **FIFO Cost Layers Audit**: Inspect active depletion layers at `GET /api/v1/inventory/cost-layers?warehouse_id={id}&product_id={id}`.
+- **Two-Factor Authentication Recovery**: Users locked out of TOTP devices use single-use backup recovery codes generated at setup (`POST /api/v1/auth/2fa/verify`). An admin with `core.users.manage` can reset credentials if all codes are exhausted.
+- **Webhook Delivery Retries**: Inspect failed outgoing webhooks via `GET /api/v1/integrations/webhooks/{id}/deliveries` and trigger exponential-backoff retry via `POST /api/v1/integrations/webhooks/deliveries/{id}/retry`.
+- **Accounting CSV Data Export**: Download standard financial ledger journals at `GET /api/v1/integrations/accounting/export-sales`, `export-ledger`, and `export-inventory`.
 
 ## 7. Incident checklist
 

@@ -3,11 +3,35 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 16 — External Integrations & Data Exchange (Webhooks, API Keys, Accounting CSV Export) (Release 2, Item 6): **complete** (tagged `phase-16-complete`).
-Phases 0 through 16 are **complete** (tagged `phase-0-complete` through `phase-16-complete`). See `docs/reports/phase-16.md` for Phase 16 details.
+Phase 17 — Release 2 Final Hardening, Acceptance Audit & Documentation: **complete** (tagged `phase-17-complete`, `release-2-complete`).
+All 18 phases (Phases 0 through 17) across Release 1 (MVP) and Release 2 (Extended Enterprise) are **100% complete**. See [`docs/reports/FINAL.md`](reports/FINAL.md) for the final Section 15 acceptance report.
 
-## Remaining Phases (Release 2 & Final Acceptance)
-- **Phase 17**: Release 2 Final Hardening, Acceptance Audit & Documentation (Comprehensive Section 15 acceptance verification, seeded demo tenant, runbook update, and final delivery report).
+## Remaining Phases
+- **None**: Release 1 and Release 2 are fully built, audited, and verified. Release 3 is documented for the future roadmap.
+
+## Done (Phase 17, on top of Phases 0-16)
+- Section 15 Final Acceptance Audit & Hardening:
+  - Created and executed `tests/Feature/Acceptance/FinalAcceptanceTest.php` testing each invariant:
+    - Shop A cannot access Shop B by any route (tenant isolation).
+    - Calls without permission are rejected (403 Forbidden).
+    - Frontend prices and totals are completely ignored by the server (authoritative price list G1).
+    - A failed sale leaves no invoice, payment, or stock movement (atomic rollback G4).
+    - Same idempotency key creates no duplicate sale (idempotency deduplication G2).
+    - Stock balance strictly equals the sum of its stock ledger entries (G5).
+    - Returns cannot exceed quantity sold (409 Conflict).
+    - Every critical change is recorded in the audit log (`audit_logs` append-only G9).
+  - Seeded demo tenant through the real onboarding flow: `php artisan demo:seed --shop-code=DEMO-FINAL`.
+  - Operations Runbook update (`docs/RUNBOOK.md`) covering all Release 2 operational workflows.
+  - Traceability Matrix update (`docs/TRACEABILITY.md`) mapping Phases 11 through 17.
+  - Comprehensive Final Acceptance Report (`docs/reports/FINAL.md`).
+  - Readme update (`README.md`) showcasing the complete Universal POS enterprise capabilities.
+- Quality Gates & Invariants:
+  - 167 backend Pest tests (878 assertions) passing (100% pass rate).
+  - 48 frontend Vitest tests (11 test suites) passing (100% pass rate).
+  - 0 Pint violations (`php vendor/bin/pint --test`).
+  - 0 ESLint errors (`npm run lint`).
+  - 0 Dynamic-Only rule violations (`node scripts/check-dynamic-only.js`).
+  - Production build clean (`dist/`). Tagged `phase-17-complete` & `release-2-complete`.
 
 ## Done (Phase 16, on top of Phases 0-15)
 - External Integrations & Data Exchange Engine (Release 2, Item 6):
