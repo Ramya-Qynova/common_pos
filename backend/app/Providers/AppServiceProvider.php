@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Models\Platform\PlatformSession;
 use App\Models\Platform\PlatformUser;
 use App\Services\Auth\TokenPair;
+use App\Services\Integrations\AccountingExporter;
+use App\Services\Integrations\GenericCsvAccountingExporter;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TenantContext::class);
+        $this->app->bind(
+            AccountingExporter::class,
+            GenericCsvAccountingExporter::class
+        );
     }
 
     /**

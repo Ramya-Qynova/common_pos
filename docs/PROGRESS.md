@@ -3,12 +3,31 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 15 — Advanced Business Reports & Financial Analytics (Release 2, Item 5): **complete** (tagged `phase-15-complete`).
-Phases 0 through 15 are **complete** (tagged `phase-0-complete` through `phase-15-complete`). See `docs/reports/phase-15.md` for Phase 15 details.
+Phase 16 — External Integrations & Data Exchange (Webhooks, API Keys, Accounting CSV Export) (Release 2, Item 6): **complete** (tagged `phase-16-complete`).
+Phases 0 through 16 are **complete** (tagged `phase-0-complete` through `phase-16-complete`). See `docs/reports/phase-16.md` for Phase 16 details.
 
 ## Remaining Phases (Release 2 & Final Acceptance)
-- **Phase 16**: External Integrations & Data Exchange (Outgoing signed webhooks delivery engine with HMAC-SHA256 signatures, event dispatcher, and Generic accounting CSV export center).
 - **Phase 17**: Release 2 Final Hardening, Acceptance Audit & Documentation (Comprehensive Section 15 acceptance verification, seeded demo tenant, runbook update, and final delivery report).
+
+## Done (Phase 16, on top of Phases 0-15)
+- External Integrations & Data Exchange Engine (Release 2, Item 6):
+  - Outgoing Webhooks Delivery Engine: `WebhookService` with HMAC-SHA256 signature verification (`X-POS-Signature`), event subscriptions (`sale.created`, `inventory.adjusted`, `shift.closed`, `*`), and delivery tracking (`WebhookDelivery`).
+  - API Access Keys: `ApiKeyService` with SHA-256 token hashing, prefixed tokens (`pos_live_...`), permission scoping, expiration, and revocation.
+  - Accounting CSV Export Center: Section 12 adapter `AccountingExporter` implemented by `GenericCsvAccountingExporter` exporting Sales Journal, General Ledger, and Inventory Valuation.
+- Backend Endpoints & Test Suite:
+  - Webhooks CRUD, test ping, deliveries log, and retry endpoints.
+  - API keys CRUD and generation endpoints.
+  - Accounting CSV export endpoints (`export-sales`, `export-ledger`, `export-inventory`).
+  - Feature test `WebhooksAndIntegrationsTest.php` with 44 assertions.
+- Frontend Integrations Management Screen:
+  - `IntegrationsScreen.jsx`: Tabbed views for Outgoing Webhooks, API Access Keys, and Accounting Export Center with date range filters.
+  - Modals for registering webhooks, delivery logs review with retry, and API key generation.
+  - Strict compliance with Dynamic-Only Rule (G12): zero hardcoded strings.
+- Quality Gates & Invariants:
+  - 160 backend Pest tests (860 assertions) passing.
+  - 48 frontend Vitest tests (11 test suites) passing.
+  - Zero dynamic-only rule violations (`node scripts/check-dynamic-only.js`).
+  - Pint (0 violations), ESLint (0 errors), and Vite production build clean. Tagged `phase-16-complete`.
 
 ## Done (Phase 15, on top of Phases 0-14)
 - Advanced Financial Analytics & Reporting Engine (Release 2, Item 5):

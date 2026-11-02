@@ -9,6 +9,7 @@ import { ReportsScreen } from './ReportsScreen';
 import { TransfersScreen } from './TransfersScreen';
 import { ReconciliationsScreen } from './ReconciliationsScreen';
 import { TemplatesScreen } from './TemplatesScreen';
+import { IntegrationsScreen } from './IntegrationsScreen';
 import { AuthProvider } from '../auth/AuthContext';
 import { t } from '../i18n';
 
@@ -509,6 +510,77 @@ describe('Management & Operational Dashboard Screens', () => {
       fireEvent.click(screen.getByText(t('templates.action.check_updates')));
       await waitFor(() => {
         expect(screen.getByText(t('templates.update_preview'))).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('IntegrationsScreen', () => {
+    it('renders webhooks list and switches tabs to api keys and accounting export', async () => {
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes('/integrations/webhooks')) {
+          return Promise.resolve({
+            json: async () => ({
+              success: true,
+              data: [
+                {
+                  id: 1,
+                  name: 'Sales Sync Webhook',
+                  url: 'https://example.com/sync',
+                  events: ['sale.created'],
+                  deliveries_count: 5,
+                },
+              ],
+            }),
+          });
+        }
+        if (url.includes('/integrations/api-keys')) {
+          return Promise.resolve({
+            json: async () => ({
+              success: true,
+              data: [
+                {
+                  id: 1,
+                  name: 'ERP API Key',
+                  prefix: 'pos_live_',
+                  secret_preview: 'a1b2',
+                  created_at: '2026-11-01T12:00:00Z',
+                  last_used_at: null,
+                },
+              ],
+            }),
+          });
+        }
+        return Promise.resolve({
+          json: async () => ({ success: true, data: [] }),
+        });
+      });
+
+      render(
+        <AuthProvider>
+          <IntegrationsScreen />
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Sales Sync Webhook')).toBeInTheDocument();
+        expect(screen.getByText('https://example.com/sync')).toBeInTheDocument();
+      });
+
+      // Switch to API Keys tab
+      fireEvent.click(screen.getByText(t('integrations.tab.api_keys')));
+
+      await waitFor(() => {
+        expect(screen.getByText('ERP API Key')).toBeInTheDocument();
+        expect(screen.getByText('pos_live_')).toBeInTheDocument();
+      });
+
+      // Switch to Accounting Data Export tab
+      fireEvent.click(screen.getByText(t('integrations.tab.accounting')));
+
+      await waitFor(() => {
+        expect(screen.getByText(t('integrations.accounting.sales_title'))).toBeInTheDocument();
+        expect(screen.getByText(t('integrations.accounting.ledger_title'))).toBeInTheDocument();
+        expect(screen.getByText(t('integrations.accounting.inventory_title'))).toBeInTheDocument();
       });
     });
   });

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Append-only (G5, G9). balance_after is a point-in-time snapshot; the
@@ -31,5 +32,10 @@ class CustomerLedger extends Model
     protected function casts(): array
     {
         return ['occurred_at' => 'datetime', 'created_at' => 'datetime'];
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property string $amount DECIMAL(18,4) as a string (G3).
@@ -26,5 +27,10 @@ class SupplierLedger extends Model
     protected function casts(): array
     {
         return ['occurred_at' => 'datetime', 'created_at' => 'datetime'];
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

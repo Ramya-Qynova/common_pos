@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccountingExportController;
+use App\Http\Controllers\Api\V1\ApiKeyController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BarcodeController;
 use App\Http\Controllers\Api\V1\CustomerController;
@@ -27,6 +29,7 @@ use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TemplateUpdateController;
 use App\Http\Controllers\Api\V1\TenantConfigController;
+use App\Http\Controllers\Api\V1\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -140,6 +143,23 @@ Route::prefix('v1')->group(function () {
             Route::post('/stock-reconciliations/{id}/submit-counts', [StockReconciliationController::class, 'submitCounts'])->middleware('permission:inventory.adjust');
             Route::post('/stock-reconciliations/{id}/complete', [StockReconciliationController::class, 'complete'])->middleware('permission:inventory.adjust');
             Route::post('/stock-reconciliations/{id}/cancel', [StockReconciliationController::class, 'cancel'])->middleware('permission:inventory.adjust');
+
+            Route::get('/integrations/webhooks', [WebhookController::class, 'index'])->middleware('permission:core.settings.manage');
+            Route::post('/integrations/webhooks', [WebhookController::class, 'store'])->middleware('permission:core.settings.manage');
+            Route::get('/integrations/webhooks/{id}', [WebhookController::class, 'show'])->middleware('permission:core.settings.manage');
+            Route::put('/integrations/webhooks/{id}', [WebhookController::class, 'update'])->middleware('permission:core.settings.manage');
+            Route::delete('/integrations/webhooks/{id}', [WebhookController::class, 'destroy'])->middleware('permission:core.settings.manage');
+            Route::post('/integrations/webhooks/{id}/test', [WebhookController::class, 'test'])->middleware('permission:core.settings.manage');
+            Route::get('/integrations/webhooks/{id}/deliveries', [WebhookController::class, 'deliveries'])->middleware('permission:core.settings.manage');
+            Route::post('/integrations/webhooks/deliveries/{id}/retry', [WebhookController::class, 'retryDelivery'])->middleware('permission:core.settings.manage');
+
+            Route::get('/integrations/api-keys', [ApiKeyController::class, 'index'])->middleware('permission:core.settings.manage');
+            Route::post('/integrations/api-keys', [ApiKeyController::class, 'store'])->middleware('permission:core.settings.manage');
+            Route::delete('/integrations/api-keys/{id}', [ApiKeyController::class, 'destroy'])->middleware('permission:core.settings.manage');
+
+            Route::get('/integrations/accounting/export-sales', [AccountingExportController::class, 'sales'])->middleware('permission:reports.view');
+            Route::get('/integrations/accounting/export-ledger', [AccountingExportController::class, 'ledger'])->middleware('permission:reports.view');
+            Route::get('/integrations/accounting/export-inventory', [AccountingExportController::class, 'inventory'])->middleware('permission:reports.view');
         });
     });
 });
