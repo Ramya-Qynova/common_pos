@@ -11,6 +11,7 @@ import { CustomersScreen } from './screens/CustomersScreen';
 import { ReportsScreen } from './screens/ReportsScreen';
 import { TransfersScreen } from './screens/TransfersScreen';
 import { ReconciliationsScreen } from './screens/ReconciliationsScreen';
+import { TemplatesScreen } from './screens/TemplatesScreen';
 
 function Root() {
   const { session } = useAuth();
@@ -33,6 +34,7 @@ function Root() {
           <Route path="reports" element={<ReportsScreen />} />
           <Route path="transfers" element={<TransfersScreen />} />
           <Route path="reconciliations" element={<ReconciliationsScreen />} />
+          <Route path="templates" element={<TemplatesScreen />} />
           <Route path="*" element={<Navigate to="/pos" replace />} />
         </Route>
       </Routes>

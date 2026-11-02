@@ -4,6 +4,7 @@ namespace App\Services\Onboarding;
 
 use App\Exceptions\ApiException;
 use App\Models\Category;
+use App\Models\CustomFieldDefinition;
 use App\Models\LookupType;
 use App\Models\LookupValue;
 use App\Models\Permission;
@@ -51,6 +52,8 @@ class TemplateUpdateService
         $existingLookupCodes = LookupType::withoutTenantScope()->where('tenant_id', $tenantId)->pluck('code')->all();
         $existingRoleCodes = Role::withoutTenantScope()->where('tenant_id', $tenantId)->pluck('code')->all();
         $existingSettingKeys = TenantSetting::withoutTenantScope()->where('tenant_id', $tenantId)->whereNull('branch_id')->pluck('key')->all();
+        $existingCustomFieldKeys = CustomFieldDefinition::withoutTenantScope()->where('tenant_id', $tenantId)
+            ->get()->map(fn (CustomFieldDefinition $cf) => "{$cf->entity_type}:{$cf->code}")->all();
 
         return [
             'current_version' => $snapshot?->template_version,
@@ -59,6 +62,7 @@ class TemplateUpdateService
             'added_units' => array_values(array_filter($target['units'] ?? [], fn ($u) => ! in_array($u['code'], $existingUnitCodes, true))),
             'added_categories' => array_values(array_filter($target['categories'] ?? [], fn ($c) => ! in_array($c['code'], $existingCategoryCodes, true))),
             'added_lookups' => array_values(array_filter($target['lookups'] ?? [], fn ($l) => ! in_array($l['code'], $existingLookupCodes, true))),
+            'added_custom_fields' => array_values(array_filter($target['custom_fields'] ?? [], fn ($cf) => ! in_array("{$cf['entity_type']}:{$cf['code']}", $existingCustomFieldKeys, true))),
             'added_roles' => array_values(array_filter($target['default_roles'] ?? [], fn ($r) => ! in_array($r['code'], $existingRoleCodes, true))),
             'added_settings' => array_diff_key($target['default_settings'] ?? [], array_flip($existingSettingKeys)),
         ];
@@ -94,6 +98,24 @@ class TemplateUpdateService
                 }
             }
 
+            foreach ($diff['added_custom_fields'] as $cf) {
+                CustomFieldDefinition::withoutTenantScope()->firstOrCreate(
+                    ['tenant_id' => $tenantId, 'entity_type' => $cf['entity_type'], 'code' => $cf['code']],
+                    [
+                        'label' => $cf['label'],
+                        'type' => $cf['type'] ?? 'text',
+                        'required' => $cf['required'] ?? false,
+                        'default_value' => $cf['default_value'] ?? null,
+                        'validation' => $cf['validation'] ?? null,
+                        'visible_when' => $cf['visible_when'] ?? null,
+                        'searchable' => $cf['searchable'] ?? false,
+                        'show_in_list' => $cf['show_in_list'] ?? false,
+                        'show_on_receipt' => $cf['show_on_receipt'] ?? false,
+                        'sort_order' => $cf['sort_order'] ?? 0,
+                    ]
+                );
+            }
+
             foreach ($diff['added_roles'] as $roleDef) {
                 $role = Role::withoutTenantScope()->create([
                     'tenant_id' => $tenantId, 'code' => $roleDef['code'], 'name' => $roleDef['name'], 'is_system' => $roleDef['is_system'] ?? true,
@@ -120,6 +142,7 @@ class TemplateUpdateService
                 'added_units' => array_column($diff['added_units'], 'code'),
                 'added_categories' => array_column($diff['added_categories'], 'code'),
                 'added_lookups' => array_column($diff['added_lookups'], 'code'),
+                'added_custom_fields' => array_map(fn ($cf) => "{$cf['entity_type']}:{$cf['code']}", $diff['added_custom_fields']),
                 'added_roles' => array_column($diff['added_roles'], 'code'),
                 'added_settings' => array_keys($diff['added_settings']),
             ]);

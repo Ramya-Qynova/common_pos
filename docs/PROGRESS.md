@@ -3,8 +3,25 @@
 Resumability log for the Advanced Universal POS build. Read this and `docs/DECISIONS.md` first on every resume.
 
 ## Current phase
-Phase 12 — FIFO Costing Engine & Cost Layer Depletion Strategy (Release 2, Item 2): **complete** (tagged `phase-12-complete`).
-Phases 0 through 12 are **complete** (tagged `phase-0-complete` through `phase-12-complete`). See `docs/reports/phase-12.md` for Phase 12 details.
+Phase 13 — Textile, Medical & Wholesale Business Templates & Vertical Workflows (Release 2, Item 3): **complete** (tagged `phase-13-complete`).
+Phases 0 through 13 are **complete** (tagged `phase-0-complete` through `phase-13-complete`). See `docs/reports/phase-13.md` for Phase 13 details.
+
+## Done (Phase 13, on top of Phases 0-12)
+- Industry Vertical Templates (Release 2, Item 3):
+  - `textile`: Apparel, footwear, fabrics, size/color variant matrix, seasonal lookups, product custom fields (`fabric`, `style_code`, `gender`), fabric units (`mtr`, `yd`, `roll`, `dzn`, `pair`, `pcs`).
+  - `medical`: Pharmacy, healthcare, surgical, drug schedule and storage condition lookups, pharma custom fields (`generic_name`, `drug_license_no`, `hsn_code`), medicine units (`strip`, `tab`, `btl`, `box`, `tube`, `vial`), FEFO picking, 30-day expiry block.
+  - `wholesale`: B2B distribution, bulk FMCG & food categories, payment terms and transport mode lookups, B2B custom fields (`moq`, `case_pack_size`, `tax_id_gstin`), bulk units (`ctn`, `plt`, `box`, `bag`), credit sales enabled.
+- Dynamic Configuration & Custom Field Provisioning:
+  - Extended `TemplateUpdateService` (`preview()` and `apply()`) to detect, diff, provision, and audit template-defined `custom_fields`.
+  - Added `TemplateController` (`GET /templates`, `GET /templates/{id}`) and `CustomFieldController` (`GET /custom-fields`, `POST /custom-fields`).
+- Frontend Operational UI:
+  - `TemplatesScreen.jsx`: Industry template directory, vertical configuration inspector, and one-click template update preview and application.
+  - Route `/templates` added to `App.jsx`.
+- Quality Gates & Invariants:
+  - 151 backend Pest tests (736 assertions) passing (4 new tests in `VerticalTemplatesTest.php`).
+  - 45 frontend Vitest tests (11 test suites) passing.
+  - Zero dynamic-only rule violations (`node scripts/check-dynamic-only.js`).
+  - Pint, ESLint, and Vite production build clean. Tagged `phase-13-complete`.
 
 ## Done (Phase 12, on top of Phases 0-11)
 - Dynamic Costing Strategy Architecture:

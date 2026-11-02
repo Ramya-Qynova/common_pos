@@ -112,5 +112,216 @@ class TemplatesSeeder extends Seeder
                 ],
             ],
         );
+
+        // section 2 Release 2 Item 3: Textile / Apparel / Footwear
+        $textile = Template::updateOrCreate(
+            ['code' => 'textile'],
+            ['name' => 'Textile & Apparel', 'description' => 'Apparel, footwear, fabrics, size/color variant matrix, seasonal lines.', 'is_active' => true],
+        );
+
+        TemplateVersion::updateOrCreate(
+            ['template_id' => $textile->id, 'version' => 1],
+            [
+                'is_published' => true,
+                'published_at' => now(),
+                'data' => [
+                    'modules' => ['core', 'catalog', 'inventory', 'pos', 'sales_mgmt', 'customers', 'finance', 'reports', 'variants'],
+                    'default_roles' => [
+                        ['code' => 'owner', 'name' => 'Owner', 'is_system' => true, 'permissions' => ['*']],
+                        ['code' => 'admin', 'name' => 'Admin', 'is_system' => true, 'permissions' => [
+                            'core.users.manage', 'core.branches.manage', 'core.audit.view',
+                            'catalog.products.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.view',
+                            'pos.sales.create', 'pos.sales.discount', 'pos.sales.cancel', 'pos.sales.return',
+                            'pos.shift.open', 'pos.shift.close', 'customers.manage',
+                            'finance.expenses.manage', 'finance.daily_close', 'reports.view', 'approvals.approve',
+                        ]],
+                        ['code' => 'cashier', 'name' => 'Cashier', 'is_system' => true, 'permissions' => [
+                            'pos.sales.create', 'pos.shift.open', 'pos.shift.close', 'inventory.view',
+                        ]],
+                    ],
+                    'default_settings' => [
+                        'inventory.costing_method' => 'fifo',
+                    ],
+                    'units' => [
+                        ['code' => 'pcs', 'name' => 'Pieces'],
+                        ['code' => 'mtr', 'name' => 'Meters'],
+                        ['code' => 'yd', 'name' => 'Yards'],
+                        ['code' => 'roll', 'name' => 'Rolls'],
+                        ['code' => 'dzn', 'name' => 'Dozens'],
+                        ['code' => 'pair', 'name' => 'Pairs'],
+                    ],
+                    'categories' => [
+                        ['code' => 'MEN', 'name' => "Men's Apparel"],
+                        ['code' => 'WOMEN', 'name' => "Women's Apparel"],
+                        ['code' => 'KIDS', 'name' => 'Kids & Infants'],
+                        ['code' => 'FABRIC', 'name' => 'Fabrics & Yardage'],
+                        ['code' => 'ACCESSORIES', 'name' => 'Accessories & Footwear'],
+                    ],
+                    'lookups' => [
+                        ['code' => 'season', 'name' => 'Season', 'values' => [
+                            ['code' => 'summer', 'label' => 'Summer'],
+                            ['code' => 'winter', 'label' => 'Winter'],
+                            ['code' => 'monsoon', 'label' => 'Monsoon'],
+                            ['code' => 'festive', 'label' => 'Festive / Wedding'],
+                        ]],
+                        ['code' => 'fit_type', 'name' => 'Fit Type', 'values' => [
+                            ['code' => 'regular', 'label' => 'Regular Fit'],
+                            ['code' => 'slim', 'label' => 'Slim Fit'],
+                            ['code' => 'relaxed', 'label' => 'Relaxed Fit'],
+                            ['code' => 'oversized', 'label' => 'Oversized'],
+                        ]],
+                    ],
+                    'custom_fields' => [
+                        ['entity_type' => 'product', 'code' => 'fabric', 'label' => 'Fabric / Material', 'type' => 'text', 'required' => false, 'searchable' => true, 'show_in_list' => true, 'show_on_receipt' => false],
+                        ['entity_type' => 'product', 'code' => 'style_code', 'label' => 'Style / Design Code', 'type' => 'text', 'required' => false, 'searchable' => true, 'show_in_list' => true, 'show_on_receipt' => true],
+                        ['entity_type' => 'product', 'code' => 'gender', 'label' => 'Target Gender', 'type' => 'select', 'required' => false, 'searchable' => true, 'show_in_list' => false, 'show_on_receipt' => false],
+                    ],
+                    'receipt_layouts' => ['default' => ['sections' => ['header', 'lines', 'totals', 'footer']]],
+                    'ui_hints' => ['catalog.variant_matrix' => true],
+                ],
+            ],
+        );
+
+        // section 2 Release 2 Item 3: Medical / Pharmacy / Healthcare
+        $medical = Template::updateOrCreate(
+            ['code' => 'medical'],
+            ['name' => 'Pharmacy & Healthcare', 'description' => 'Pharmaceuticals, drug schedule tracking, batch/expiry controls, FEFO picking.', 'is_active' => true],
+        );
+
+        TemplateVersion::updateOrCreate(
+            ['template_id' => $medical->id, 'version' => 1],
+            [
+                'is_published' => true,
+                'published_at' => now(),
+                'data' => [
+                    'modules' => ['core', 'catalog', 'inventory', 'pos', 'sales_mgmt', 'purchases', 'customers', 'finance', 'reports', 'batch_expiry', 'serial_tracking'],
+                    'default_roles' => [
+                        ['code' => 'owner', 'name' => 'Owner', 'is_system' => true, 'permissions' => ['*']],
+                        ['code' => 'admin', 'name' => 'Admin', 'is_system' => true, 'permissions' => [
+                            'core.users.manage', 'core.branches.manage', 'core.audit.view',
+                            'catalog.products.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.view',
+                            'pos.sales.create', 'pos.sales.discount', 'pos.sales.cancel', 'pos.sales.return',
+                            'pos.shift.open', 'pos.shift.close', 'customers.manage',
+                            'finance.expenses.manage', 'finance.daily_close', 'reports.view', 'approvals.approve',
+                        ]],
+                        ['code' => 'cashier', 'name' => 'Cashier', 'is_system' => true, 'permissions' => [
+                            'pos.sales.create', 'pos.shift.open', 'pos.shift.close', 'inventory.view',
+                        ]],
+                    ],
+                    'default_settings' => [
+                        'inventory.batch_pick_order' => 'fefo',
+                        'inventory.expiry_block_days' => 30,
+                        'inventory.costing_method' => 'fifo',
+                    ],
+                    'units' => [
+                        ['code' => 'strip', 'name' => 'Strip'],
+                        ['code' => 'tab', 'name' => 'Tablet'],
+                        ['code' => 'btl', 'name' => 'Bottle'],
+                        ['code' => 'box', 'name' => 'Box'],
+                        ['code' => 'tube', 'name' => 'Tube'],
+                        ['code' => 'vial', 'name' => 'Vial'],
+                        ['code' => 'amp', 'name' => 'Ampoule'],
+                        ['code' => 'sachet', 'name' => 'Sachet'],
+                    ],
+                    'categories' => [
+                        ['code' => 'RX', 'name' => 'Prescription Drugs'],
+                        ['code' => 'OTC', 'name' => 'Over-the-Counter (OTC)'],
+                        ['code' => 'FIRST_AID', 'name' => 'First Aid & Surgical'],
+                        ['code' => 'DEVICES', 'name' => 'Medical Devices & Equipment'],
+                        ['code' => 'SUPPLEMENTS', 'name' => 'Vitamins & Supplements'],
+                    ],
+                    'lookups' => [
+                        ['code' => 'drug_schedule', 'name' => 'Drug Schedule', 'values' => [
+                            ['code' => 'general', 'label' => 'General / Non-Scheduled'],
+                            ['code' => 'schedule_h', 'label' => 'Schedule H (Prescription Only)'],
+                            ['code' => 'schedule_h1', 'label' => 'Schedule H1 (High Risk / Recorded)'],
+                            ['code' => 'schedule_x', 'label' => 'Schedule X (Narcotics)'],
+                        ]],
+                        ['code' => 'storage_condition', 'name' => 'Storage Condition', 'values' => [
+                            ['code' => 'ambient', 'label' => 'Ambient (15-25°C)'],
+                            ['code' => 'refrigerated', 'label' => 'Refrigerated (2-8°C)'],
+                            ['code' => 'cold', 'label' => 'Cold Storage (<2°C)'],
+                        ]],
+                    ],
+                    'custom_fields' => [
+                        ['entity_type' => 'product', 'code' => 'generic_name', 'label' => 'Generic / Composition Name', 'type' => 'text', 'required' => false, 'searchable' => true, 'show_in_list' => true, 'show_on_receipt' => false],
+                        ['entity_type' => 'product', 'code' => 'drug_license_no', 'label' => 'Drug License Number', 'type' => 'text', 'required' => false, 'searchable' => false, 'show_in_list' => false, 'show_on_receipt' => false],
+                        ['entity_type' => 'product', 'code' => 'hsn_code', 'label' => 'HSN / Tax Classification', 'type' => 'text', 'required' => false, 'searchable' => true, 'show_in_list' => true, 'show_on_receipt' => true],
+                    ],
+                    'receipt_layouts' => ['default' => ['sections' => ['header', 'lines', 'totals', 'footer']]],
+                    'ui_hints' => ['inventory.highlight_expiring' => true],
+                ],
+            ],
+        );
+
+        // section 2 Release 2 Item 3: Wholesale / B2B Distribution
+        $wholesale = Template::updateOrCreate(
+            ['code' => 'wholesale'],
+            ['name' => 'Wholesale & B2B Distribution', 'description' => 'B2B sales, tier pricing, case pack / pallet units, credit terms, multi-tier orders.', 'is_active' => true],
+        );
+
+        TemplateVersion::updateOrCreate(
+            ['template_id' => $wholesale->id, 'version' => 1],
+            [
+                'is_published' => true,
+                'published_at' => now(),
+                'data' => [
+                    'modules' => ['core', 'catalog', 'inventory', 'pos', 'sales_mgmt', 'purchases', 'customers', 'finance', 'reports', 'price_lists_advanced'],
+                    'default_roles' => [
+                        ['code' => 'owner', 'name' => 'Owner', 'is_system' => true, 'permissions' => ['*']],
+                        ['code' => 'admin', 'name' => 'Admin', 'is_system' => true, 'permissions' => [
+                            'core.users.manage', 'core.branches.manage', 'core.audit.view',
+                            'catalog.products.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.view',
+                            'pos.sales.create', 'pos.sales.discount', 'pos.sales.cancel', 'pos.sales.return',
+                            'pos.shift.open', 'pos.shift.close', 'customers.manage',
+                            'finance.expenses.manage', 'finance.daily_close', 'reports.view', 'approvals.approve',
+                        ]],
+                        ['code' => 'cashier', 'name' => 'Cashier', 'is_system' => true, 'permissions' => [
+                            'pos.sales.create', 'pos.shift.open', 'pos.shift.close', 'inventory.view',
+                        ]],
+                    ],
+                    'default_settings' => [
+                        'sales.allow_credit_sales' => true,
+                        'inventory.costing_method' => 'fifo',
+                    ],
+                    'units' => [
+                        ['code' => 'pcs', 'name' => 'Pieces'],
+                        ['code' => 'box', 'name' => 'Box'],
+                        ['code' => 'ctn', 'name' => 'Carton'],
+                        ['code' => 'plt', 'name' => 'Pallet'],
+                        ['code' => 'pack', 'name' => 'Pack'],
+                        ['code' => 'kg', 'name' => 'Kilogram'],
+                        ['code' => 'bag', 'name' => 'Bag'],
+                    ],
+                    'categories' => [
+                        ['code' => 'BULK_FOOD', 'name' => 'Bulk Staples & Grains'],
+                        ['code' => 'FMCG_WHOLESALE', 'name' => 'FMCG Case Packs'],
+                        ['code' => 'COMMERCIAL', 'name' => 'Commercial & Institutional'],
+                        ['code' => 'RAW_MATERIALS', 'name' => 'Industrial Raw Materials'],
+                    ],
+                    'lookups' => [
+                        ['code' => 'payment_terms', 'name' => 'Payment Terms', 'values' => [
+                            ['code' => 'immediate', 'label' => 'Immediate / Advance'],
+                            ['code' => 'net_15', 'label' => 'Net 15 Days'],
+                            ['code' => 'net_30', 'label' => 'Net 30 Days'],
+                            ['code' => 'net_60', 'label' => 'Net 60 Days'],
+                        ]],
+                        ['code' => 'transport_mode', 'name' => 'Transport Mode', 'values' => [
+                            ['code' => 'road_truck', 'label' => 'Road Transport / Truck'],
+                            ['code' => 'rail_cargo', 'label' => 'Rail Freight'],
+                            ['code' => 'air_cargo', 'label' => 'Air Cargo'],
+                            ['code' => 'express_courier', 'label' => 'Express Courier'],
+                        ]],
+                    ],
+                    'custom_fields' => [
+                        ['entity_type' => 'product', 'code' => 'moq', 'label' => 'Minimum Order Quantity (MOQ)', 'type' => 'number', 'required' => false, 'searchable' => false, 'show_in_list' => true, 'show_on_receipt' => false],
+                        ['entity_type' => 'product', 'code' => 'case_pack_size', 'label' => 'Case Pack Size', 'type' => 'number', 'required' => false, 'searchable' => false, 'show_in_list' => true, 'show_on_receipt' => false],
+                        ['entity_type' => 'customer', 'code' => 'tax_id_gstin', 'label' => 'Customer Tax ID / GSTIN', 'type' => 'text', 'required' => false, 'searchable' => true, 'show_in_list' => true, 'show_on_receipt' => true],
+                    ],
+                    'receipt_layouts' => ['default' => ['sections' => ['header', 'lines', 'totals', 'footer']]],
+                    'ui_hints' => ['sales.show_case_pack' => true],
+                ],
+            ],
+        );
     }
 }

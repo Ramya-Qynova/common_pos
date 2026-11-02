@@ -8,6 +8,7 @@ import { CustomersScreen } from './CustomersScreen';
 import { ReportsScreen } from './ReportsScreen';
 import { TransfersScreen } from './TransfersScreen';
 import { ReconciliationsScreen } from './ReconciliationsScreen';
+import { TemplatesScreen } from './TemplatesScreen';
 import { AuthProvider } from '../auth/AuthContext';
 import { t } from '../i18n';
 
@@ -328,6 +329,7 @@ describe('Management & Operational Dashboard Screens', () => {
               id: 1,
               transfer_number: 'TRF-TEST-01',
               source_warehouse: 'Central Warehouse',
+              
               destination_warehouse: 'Outlet 1',
               status: 'dispatched',
               dispatched_at: '2026-11-01T10:00:00Z',
@@ -380,6 +382,74 @@ describe('Management & Operational Dashboard Screens', () => {
 
       fireEvent.click(screen.getByText(`+ ${t('reconciliations.start')}`));
       expect(screen.getByText(t('reconciliations.modal.start_title'))).toBeInTheDocument();
+    });
+  });
+
+  describe('TemplatesScreen', () => {
+    it('fetches and renders available business templates and opens details modal', async () => {
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes('/template/update-preview')) {
+          return Promise.resolve({
+            json: async () => ({
+              success: true,
+              data: {
+                current_version: 1,
+                target_version: 2,
+                added_modules: ['variants'],
+                added_units: [{ code: 'mtr', name: 'Meters' }],
+                added_categories: [{ code: 'FABRIC', name: 'Fabrics' }],
+                added_custom_fields: [{ code: 'fabric', label: 'Fabric / Material' }],
+              },
+            }),
+          });
+        }
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                id: 1,
+                code: 'textile',
+                name: 'Textile & Apparel',
+                description: 'Apparel, footwear, fabrics',
+                version: 1,
+                modules: ['variants', 'catalog'],
+                units: [{ code: 'mtr', name: 'Meters' }],
+                categories: [{ code: 'MEN', name: "Men's Apparel" }],
+                custom_fields: [{ code: 'fabric', label: 'Fabric / Material', type: 'text' }],
+                lookups: [{ code: 'season', name: 'Season', values: [{ code: 'summer', label: 'Summer' }] }],
+              },
+            ],
+          }),
+        });
+      });
+
+      render(
+        <AuthProvider>
+          <TemplatesScreen />
+        </AuthProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Textile & Apparel')).toBeInTheDocument();
+        expect(screen.getByText('textile')).toBeInTheDocument();
+      });
+
+      // Open details modal
+      fireEvent.click(screen.getByText(t('templates.action.view')));
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: new RegExp(t('templates.details.title'), 'i') })).toBeInTheDocument();
+        expect(screen.getByText(/Fabric \/ Material/i)).toBeInTheDocument();
+      });
+
+      // Close modal
+      fireEvent.click(screen.getByText(t('common.close')));
+
+      // Check updates preview
+      fireEvent.click(screen.getByText(t('templates.action.check_updates')));
+      await waitFor(() => {
+        expect(screen.getByText(t('templates.update_preview'))).toBeInTheDocument();
+      });
     });
   });
 });

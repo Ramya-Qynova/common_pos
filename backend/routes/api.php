@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BarcodeController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\CustomFieldController;
 use App\Http\Controllers\Api\V1\DailyClosingController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\HardwareProfileController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Api\V1\StockReconciliationController;
 use App\Http\Controllers\Api\V1\StockTransferController;
 use App\Http\Controllers\Api\V1\SyncConflictController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\TemplateUpdateController;
 use App\Http\Controllers\Api\V1\TenantConfigController;
 use Illuminate\Support\Facades\Route;
@@ -82,6 +84,10 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/template/update-preview', [TemplateUpdateController::class, 'preview'])->middleware('permission:core.settings.manage');
             Route::post('/template/update', [TemplateUpdateController::class, 'apply'])->middleware('permission:core.settings.manage');
+            Route::get('/templates', [TemplateController::class, 'index'])->middleware('permission:pos.sales.create');
+            Route::get('/templates/{id}', [TemplateController::class, 'show'])->middleware('permission:pos.sales.create');
+            Route::get('/custom-fields', [CustomFieldController::class, 'index'])->middleware('permission:pos.sales.create');
+            Route::post('/custom-fields', [CustomFieldController::class, 'store'])->middleware('permission:core.settings.manage');
 
             Route::get('/hardware-profiles', [HardwareProfileController::class, 'index'])->middleware('permission:core.branches.manage');
             Route::post('/hardware-profiles', [HardwareProfileController::class, 'store'])->middleware('permission:core.branches.manage');
